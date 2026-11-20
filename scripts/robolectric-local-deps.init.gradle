@@ -1,0 +1,14 @@
+// Optional workaround for Windows user profiles whose path contains a space (e.g. C:\Users\First Last).
+// Robolectric 4.16.1 percent-encodes the ~/.m2 path ("First%20Last") and then fails with NoSuchFileException.
+// Copy the android-all-instrumented-*.jar files from ~/.m2/repository/org/robolectric/android-all-instrumented
+// into a folder without spaces, then run:
+//   ./gradlew testDebugUnitTest -I scripts/robolectric-local-deps.init.gradle -ProbolectricDepsDir=C:/robo-deps
+allprojects {
+    tasks.withType(Test).configureEach {
+        def dir = project.findProperty("robolectricDepsDir")
+        if (dir) {
+            systemProperty "robolectric.offline", "true"
+            systemProperty "robolectric.dependency.dir", dir
+        }
+    }
+}

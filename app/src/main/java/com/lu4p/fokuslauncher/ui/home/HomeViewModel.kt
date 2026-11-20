@@ -1,0 +1,2001 @@
+package com.lu4p.fokuslauncher.ui.home
+
+import android.Manifest
+import android.app.AlarmManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.location.LocationManager
+import android.os.BatteryManager
+import android.os.Process
+import android.os.UserHandle
+import android.provider.AlarmClock
+import android.util.Log
+import android.provider.CalendarContract
+import android.text.format.DateFormat
+import android.widget.Toast
+import androidx.core.net.toUri
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.lu4p.fokuslauncher.data.local.PreferencesManager
+import com.lu4p.fokuslauncher.data.iconpack.ArcticonsIconPackRepository
+import com.lu4p.fokuslauncher.data.local.TwoFingerDirection
+import com.lu4p.fokuslauncher.data.model.AppInfo
+import com.lu4p.fokuslauncher.data.model.dynamicCategoryExtras
+import com.lu4p.fokuslauncher.data.model.AppShortcutAction
+import com.lu4p.fokuslauncher.data.model.FavoriteApp
+import com.lu4p.fokuslauncher.data.model.appMetadataKey
+import com.lu4p.fokuslauncher.data.model.appProfileKey
+import com.lu4p.fokuslauncher.data.model.drawerOpenCountKey
+import com.lu4p.fokuslauncher.data.model.favoriteAppStableKey
+import com.lu4p.fokuslauncher.data.model.favoriteLauncherShortcutId
+import com.lu4p.fokuslauncher.data.model.HOST_APP_METADATA_SENTINEL
+import com.lu4p.fokuslauncher.data.model.metadataSettingsStableKey
+import com.lu4p.fokuslauncher.data.model.CountdownEvent
+import com.lu4p.fokuslauncher.data.model.HomeDateFormatStyle
+import com.lu4p.fokuslauncher.data.model.HomeAlignment
+import com.lu4p.fokuslauncher.data.model.HomeExtraWidgetEntry
+import com.lu4p.fokuslauncher.data.model.homeExtraWorldClockCount
+import com.lu4p.fokuslauncher.data.model.NotificationIndicatorColorPreset
+import com.lu4p.fokuslauncher.data.model.NotificationIndicatorStyle
+import com.lu4p.fokuslauncher.data.model.PhotoWallpaperOutlineWidthDp
+import com.lu4p.fokuslauncher.data.model.LauncherFontScale
+import com.lu4p.fokuslauncher.data.model.HomeShortcut
+import com.lu4p.fokuslauncher.data.model.ReservedCategoryNames
+import com.lu4p.fokuslauncher.data.model.WorldClockCity
+import com.lu4p.fokuslauncher.data.model.ianaLeafLabel
+import com.lu4p.fokuslauncher.data.model.ShortcutTarget
+import com.lu4p.fokuslauncher.data.model.WeatherData
+import com.lu4p.fokuslauncher.data.model.WidgetTapTarget
+import com.lu4p.fokuslauncher.R
+import com.lu4p.fokuslauncher.data.repository.AppRepository
+import com.lu4p.fokuslauncher.data.repository.WeatherRepository
+import com.lu4p.fokuslauncher.media.MediaNotificationHelper
+import com.lu4p.fokuslauncher.media.MediaPlaybackUiState
+import com.lu4p.fokuslauncher.media.MediaRepository
+import com.lu4p.fokuslauncher.notification.NotificationIndicatorRepository
+import com.lu4p.fokuslauncher.pomodoro.PomodoroRepository
+import com.lu4p.fokuslauncher.pomodoro.PomodoroUiState
+import com.lu4p.fokuslauncher.data.model.PomodoroMode
+import com.lu4p.fokuslauncher.usage.DigitalWellbeingHelper
+import com.lu4p.fokuslauncher.usage.ScreenTimeRepository
+import com.lu4p.fokuslauncher.usage.UsageStatsHelper
+import com.lu4p.fokuslauncher.usage.formatScreenTimeDuration
+import com.lu4p.fokuslauncher.utils.LockScreenHelper
+import com.lu4p.fokuslauncher.utils.PrivateSpaceManager
+import com.lu4p.fokuslauncher.utils.registerBroadcastReceiverNotExported
+import com.lu4p.fokuslauncher.utils.registerStickyBroadcastReceiverNotExported
+import com.lu4p.fokuslauncher.utils.isDefaultHomeApp
+import com.lu4p.fokuslauncher.utils.openDefaultLauncherSettings
+import com.lu4p.fokuslauncher.ui.components.clockDisplayTimeWithoutDayPeriod
+import com.lu4p.fokuslauncher.ui.components.toggleNoteTask
+import com.lu4p.fokuslauncher.ui.util.formatShortcutTargetDisplay
+import com.lu4p.fokuslauncher.ui.util.stateEagerlyIn
+import com.lu4p.fokuslauncher.ui.util.stateWhileSubscribedIn
+import com.lu4p.fokuslauncher.data.util.TemperatureUnitHelper
+import com.lu4p.fokuslauncher.data.model.TemperatureUnit
+import com.lu4p.fokuslauncher.data.util.AirQualityScaleHelper
+import com.lu4p.fokuslauncher.data.model.AirQualityScale
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.text.DateFormat as JavaDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import javax.inject.Inject
+
+data class HomeUiState(
+    val showHomeClock: Boolean = true,
+    val showHomeDate: Boolean = true,
+    val showHomeWeather: Boolean = true,
+    val showHomeBattery: Boolean = true,
+    val isDefaultLauncher: Boolean = true,
+    val homeAlignment: HomeAlignment = HomeAlignment.LEFT,
+    val doubleTapEmptyLockEnabled: Boolean = false,
+    val doubleTapEmptyActionEnabled: Boolean = false,
+    val launcherFontScale: Float = LauncherFontScale.DEFAULT,
+    /** Image / non-black wallpaper — stronger home scrim for readability. */
+    val usesPhotoWallpaper: Boolean = false,
+    /** Uniform outline stroke in dp when [usesPhotoWallpaper]; 0 = per-widget defaults. */
+    val photoWallpaperOutlineWidthDp: Float = PhotoWallpaperOutlineWidthDp.DEFAULT,
+    val homeAppIconMode: HomeAppIconMode = HomeAppIconMode.TEXT,
+)
+
+data class HomeNotificationIndicatorUiState(
+    /** True when the preference is on and notification listener access is granted. */
+    val enabled: Boolean = false,
+    val style: NotificationIndicatorStyle = NotificationIndicatorStyle.DOT,
+    val colorArgb: Int = NotificationIndicatorColorPreset.DEFAULT.argb,
+    val appsWithNotifications: Set<String> = emptySet(),
+)
+
+data class HomeClockUiState(
+    val currentTime: String = "",
+    val currentDate: String = "",
+    val batteryPercent: Int = 0,
+    val isCharging: Boolean = false,
+    /** Mirrors [DateFormat.is24HourFormat] for the home clock layout and semantics. */
+    val is24HourFormat: Boolean = true,
+    /** Next upcoming alarm text (e.g. "Wed 07:15"), or null when no alarm is set. */
+    val nextAlarm: String? = null,
+)
+
+data class HomeWeatherUiState(
+    val weather: WeatherData? = null,
+    /** Matches system regional temperature unit; drives label and Open-Meteo request. */
+    val weatherUseFahrenheit: Boolean = false,
+    val showWeatherWidget: Boolean = false,
+)
+
+data class HomeMediaUiState(
+    /** User preference; the widget is opt-in and off by default. */
+    val enabled: Boolean = false,
+    /** Current now-playing session, or null when nothing is playing. */
+    val playback: MediaPlaybackUiState? = null,
+) {
+    /** The widget is only drawn when enabled and something is actually playing. */
+    val showWidget: Boolean
+        get() = enabled && playback != null
+}
+
+data class HomeScreenTimeUiState(
+    /** User preference; the widget is opt-in and off by default. */
+    val enabled: Boolean = false,
+    /** Formatted rolling 24-hour total, or null when usage access is missing. */
+    val durationText: String? = null,
+) {
+    val showWidget: Boolean
+        get() = enabled && durationText != null
+}
+
+data class HomeNoteUiState(
+    /** User preference; the note is opt-in and off by default. */
+    val showWidget: Boolean = false,
+    val text: String = "",
+)
+
+data class HomeWorldClockUiState(
+        val citiesById: Map<String, WorldClockCityUi> = emptyMap(),
+)
+
+data class CountdownEventUi(
+        val id: String,
+        val title: String,
+        val remainingText: String,
+)
+
+data class HomeCountdownUiState(
+        val eventsById: Map<String, CountdownEventUi> = emptyMap(),
+)
+
+/** One visible chip in the ordered home extras row. */
+sealed class HomeExtraChipUi {
+    data class WorldClock(val city: WorldClockCityUi) : HomeExtraChipUi()
+    data class Countdown(val title: String, val remainingText: String) : HomeExtraChipUi()
+}
+
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    @param:ApplicationContext private val context: Context,
+    private val appRepository: AppRepository,
+    private val preferencesManager: PreferencesManager,
+    private val arcticonsIconPackRepository: ArcticonsIconPackRepository,
+    private val weatherRepository: WeatherRepository,
+    private val mediaRepository: MediaRepository,
+    private val screenTimeRepository: ScreenTimeRepository,
+    private val notificationIndicatorRepository: NotificationIndicatorRepository,
+    private val pomodoroRepository: PomodoroRepository,
+    private val privateSpaceManager: PrivateSpaceManager,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(HomeUiState())
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private val _clockUiState = MutableStateFlow(HomeClockUiState())
+    val clockUiState: StateFlow<HomeClockUiState> = _clockUiState.asStateFlow()
+
+    private val _homeDateFormatStyle = MutableStateFlow(HomeDateFormatStyle.SYSTEM_DEFAULT)
+
+    private val _temperatureUnit = MutableStateFlow(TemperatureUnit.SYSTEM_DEFAULT)
+
+    private val _airQualityScale = MutableStateFlow(AirQualityScale.SYSTEM_DEFAULT)
+
+    private val _weatherUiState = MutableStateFlow(HomeWeatherUiState())
+    val weatherUiState: StateFlow<HomeWeatherUiState> = _weatherUiState.asStateFlow()
+
+    private val _mediaUiState = MutableStateFlow(HomeMediaUiState())
+    val mediaUiState: StateFlow<HomeMediaUiState> = _mediaUiState.asStateFlow()
+
+    val pomodoroUiState: StateFlow<PomodoroUiState> = pomodoroRepository.uiState
+
+    private val _screenTimeUiState = MutableStateFlow(HomeScreenTimeUiState())
+    val screenTimeUiState: StateFlow<HomeScreenTimeUiState> = _screenTimeUiState.asStateFlow()
+
+    private val _noteUiState = MutableStateFlow(HomeNoteUiState())
+    val noteUiState: StateFlow<HomeNoteUiState> = _noteUiState.asStateFlow()
+
+    private val _noteDraft = MutableStateFlow<String?>(null)
+    val noteDraft: StateFlow<String?> = _noteDraft.asStateFlow()
+    private val _noteStorageErrors = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val noteStorageErrors = _noteStorageErrors.asSharedFlow()
+    private var clearingNote = false
+    private var noteSaveFailed = false
+
+    private val _showNoteEditor = MutableStateFlow(false)
+    val showNoteEditor: StateFlow<Boolean> = _showNoteEditor.asStateFlow()
+
+    private val _worldClockUiState = MutableStateFlow(HomeWorldClockUiState())
+    val worldClockUiState: StateFlow<HomeWorldClockUiState> = _worldClockUiState.asStateFlow()
+
+    private val _countdownUiState = MutableStateFlow(HomeCountdownUiState())
+    val countdownUiState: StateFlow<HomeCountdownUiState> = _countdownUiState.asStateFlow()
+
+    private val _homeExtraWidgets = MutableStateFlow<List<HomeExtraWidgetEntry>>(emptyList())
+    /** Ordered extra chips (each city + countdown) for the shared home row. */
+    val homeExtraWidgets: StateFlow<List<HomeExtraWidgetEntry>> = _homeExtraWidgets.asStateFlow()
+
+    private var worldClockCities: List<WorldClockCity> = emptyList()
+    private var countdownEvents: List<CountdownEvent> = emptyList()
+    private var showWorldClockWeather: Boolean = false
+    private var showHomeAirQuality: Boolean = false
+    private var worldClockWeatherTexts: Map<String, String> = emptyMap()
+    private var worldClockWeatherFetchJob: Job? = null
+
+    private val _notificationIndicatorUiState = MutableStateFlow(HomeNotificationIndicatorUiState())
+    val notificationIndicatorUiState: StateFlow<HomeNotificationIndicatorUiState> =
+            _notificationIndicatorUiState.asStateFlow()
+
+    /** Serializes home app-list refresh so concurrent loads cannot race and prune favorites. */
+    private val installedAppsRefreshMutex = Mutex()
+
+    // Raw favorites from DataStore
+    private val rawFavorites: StateFlow<List<FavoriteApp>> =
+            preferencesManager.favoritesFlow.stateEagerlyIn(viewModelScope, emptyList())
+
+    /** Eager prefs mirror so edit sessions can seed even when UI is not collecting [rightSideShortcuts]. */
+    private val rawRightSideShortcuts: StateFlow<List<HomeShortcut>> =
+            preferencesManager.rightSideShortcutsFlow.stateEagerlyIn(viewModelScope, emptyList())
+
+    // Renames from Room
+    private val _renameMap = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    // App name lookup keyed by package and profile.
+    private val _appNameMap = MutableStateFlow<Map<String, String>>(emptyMap())
+    private val _archivedAppKeys = MutableStateFlow<Set<String>>(emptySet())
+
+    /**
+     * Favorites with resolved display names.
+     * Priority: custom rename > PackageManager name > stored label.
+     */
+    val favorites: StateFlow<List<FavoriteApp>> = combine(
+        rawFavorites,
+        _renameMap,
+        _appNameMap,
+        _archivedAppKeys
+    ) { favs, renames, appNames, archivedKeys ->
+        resolveFavoritesSnapshot(favs, renames, appNames, archivedKeys)
+    }.stateWhileSubscribedIn(viewModelScope, emptyList())
+
+    // ── Dialog state ────────────────────────────────────────────────
+
+    private val _appMenuTarget = MutableStateFlow<FavoriteApp?>(null)
+    val appMenuTarget: StateFlow<FavoriteApp?> = _appMenuTarget.asStateFlow()
+
+    private val _appMenuShortcuts = MutableStateFlow<List<AppShortcutAction>>(emptyList())
+    val appMenuShortcuts: StateFlow<List<AppShortcutAction>> = _appMenuShortcuts.asStateFlow()
+
+    private val _showHomeScreenMenu = MutableStateFlow(false)
+    val showHomeScreenMenu: StateFlow<Boolean> = _showHomeScreenMenu.asStateFlow()
+
+    private val _showWeatherAppPicker = MutableStateFlow(false)
+    val showWeatherAppPicker: StateFlow<Boolean> = _showWeatherAppPicker.asStateFlow()
+
+    private val _requestLockAccessibilitySettings = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val requestLockAccessibilitySettings = _requestLockAccessibilitySettings.asSharedFlow()
+
+    private val _categoryOptions = MutableStateFlow<List<String>>(emptyList())
+    val categoryOptions: StateFlow<List<String>> = _categoryOptions.asStateFlow()
+
+    // ── Edit screen state ───────────────────────────────────────────
+
+    private val _allInstalledApps = MutableStateFlow<List<AppInfo>>(emptyList())
+    val allInstalledApps: StateFlow<List<AppInfo>> = _allInstalledApps.asStateFlow()
+
+    private val _allShortcutActions = MutableStateFlow<List<AppShortcutAction>>(emptyList())
+    val allShortcutActions: StateFlow<List<AppShortcutAction>> = _allShortcutActions.asStateFlow()
+
+    private val _editFavorites = MutableStateFlow<List<FavoriteApp>>(emptyList())
+    val editFavorites: StateFlow<List<FavoriteApp>> = _editFavorites.asStateFlow()
+
+    private val _editRightShortcuts = MutableStateFlow<List<HomeShortcut>>(emptyList())
+    val editRightShortcuts: StateFlow<List<HomeShortcut>> = _editRightShortcuts.asStateFlow()
+
+    /**
+     * Edit screens call [startEditingShortcuts] / [startEditingHomeApps] from `remember`, which
+     * re-runs when returning from a child route (e.g. icon picker). Keep a session flag so we do
+     * not clobber in-progress edits by reloading from persisted preferences.
+     */
+    private var isEditingRightShortcuts = false
+    private var isEditingHomeApps = false
+
+    // ── Swipe gestures ──────────────────────────────────────────────
+
+    val swipeLeftTarget: StateFlow<ShortcutTarget?> =
+            preferencesManager.swipeLeftTargetFlow.stateWhileSubscribedIn(viewModelScope, null)
+
+    val swipeRightTarget: StateFlow<ShortcutTarget?> =
+            preferencesManager.swipeRightTargetFlow.stateWhileSubscribedIn(viewModelScope, null)
+
+    val twoFingerTargets = TwoFingerDirection.entries.associateWith { direction ->
+        preferencesManager.twoFingerTargetFlow(direction).stateWhileSubscribedIn(viewModelScope, null)
+    }
+
+    val rightSideShortcuts: StateFlow<List<HomeShortcut>> =
+            combine(preferencesManager.rightSideShortcutsFlow, _archivedAppKeys) {
+                    shortcuts,
+                    archivedKeys ->
+                shortcuts.filterNot { shortcutArchivedKey(it) in archivedKeys }
+            }.stateWhileSubscribedIn(
+                    viewModelScope,
+                    emptyList(),
+            )
+
+    val profileDisplayNameOverrides: StateFlow<Map<String, String>> =
+            preferencesManager.profileDisplayNameOverridesFlow.stateWhileSubscribedIn(
+                    viewModelScope,
+                    emptyMap(),
+            )
+
+    private val preferredWeatherTap: StateFlow<WidgetTapTarget?> =
+            preferencesManager.preferredWeatherTapFlow.stateEagerlyIn(viewModelScope, null)
+
+    private val preferredClockTap: StateFlow<WidgetTapTarget?> =
+            preferencesManager.preferredClockTapFlow.stateEagerlyIn(viewModelScope, null)
+
+    private val preferredCalendarTap: StateFlow<WidgetTapTarget?> =
+            preferencesManager.preferredCalendarTapFlow.stateEagerlyIn(viewModelScope, null)
+
+    private var weatherTickerJob: Job? = null
+
+    private val batteryChangedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context?, intent: Intent?) {
+            if (intent?.action != Intent.ACTION_BATTERY_CHANGED) return
+            setBatteryPercentFromIntent(intent)
+        }
+    }
+
+    private val alarmChangedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context?, intent: Intent?) {
+            if (intent?.action != AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED) return
+            refreshNextAlarm()
+        }
+    }
+
+    /**
+     * JVM default timezone is fixed at process start and does not track system changes until we
+     * handle [Intent.ACTION_TIMEZONE_CHANGED] and refresh cached formatters.
+     */
+    @Volatile
+    private var clockFormatNeedsRefresh = false
+
+    private val timezoneChangedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context?, intent: Intent?) {
+            if (intent?.action != Intent.ACTION_TIMEZONE_CHANGED) return
+            applySystemTimeZoneChange(intent.getStringExtra(TIMEZONE_CHANGED_EXTRA_ID))
+        }
+    }
+
+    /** Apply Android system timezone to the JVM default and drop cached time formatters. */
+    internal fun applySystemTimeZoneChange(timeZoneId: String?) {
+        timeZoneId?.let { TimeZone.setDefault(TimeZone.getTimeZone(it)) }
+        clockFormatNeedsRefresh = true
+    }
+
+    init {
+        viewModelScope.launch {
+            preferencesManager.ensureRightSideShortcutsInitialized()
+            preferencesManager.migrateLegacyDialerShortcutTargets()
+        }
+        startClockTicker()
+        registerBatteryReceiver()
+        registerTimezoneChangedReceiver()
+        registerAlarmChangedReceiver()
+        updateBattery()
+        refreshNextAlarm()
+        observeHomeAlignment()
+        observeHomeAppIcons()
+        observeLauncherFontScale()
+        observePhotoWallpaperAppearance()
+        observeHomeDateFormatStyle()
+        observeTemperatureUnit()
+        observeAirQualityScale()
+        observeHomeWidgetItemPreferences()
+        observeWeatherRefreshTriggers()
+        observeWorldClockWeatherPreference()
+        observeMedia()
+        pomodoroRepository.start()
+        observeNotificationIndicators()
+        observeScreenTime()
+        observeNote()
+        observeHomeExtraWidgets()
+        observeWorldClock()
+        observeCountdown()
+        observeDoubleTapEmptyLock()
+        checkDefaultLauncher()
+        refreshInstalledApps(includeShortcuts = true)
+        observeRenames()
+        observeInstalledApps()
+        observeRemovedPackages()
+        observeCategoryOptions()
+    }
+
+    override fun onCleared() {
+        listOf(batteryChangedReceiver, timezoneChangedReceiver, alarmChangedReceiver).forEach { receiver ->
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (_: IllegalArgumentException) {
+                // Not registered
+            }
+        }
+        weatherTickerJob?.cancel()
+        worldClockWeatherFetchJob?.cancel()
+        mediaRepository.stop()
+        notificationIndicatorRepository.setTrackingEnabled(
+                NotificationIndicatorRepository.CONSUMER_HOME,
+                false,
+        )
+        super.onCleared()
+    }
+
+    // ── Name resolution ─────────────────────────────────────────────
+
+    private fun observeRenames() {
+        viewModelScope.launch {
+            appRepository.getAllRenamedApps().collect { renamedApps ->
+                _renameMap.value =
+                    renamedApps.associate {
+                        metadataSettingsStableKey(
+                                it.packageName,
+                                it.profileKey,
+                                it.launcherShortcutId,
+                        ) to it.customName
+                    }
+            }
+        }
+    }
+
+    private fun observeInstalledApps() {
+        viewModelScope.launch {
+            appRepository.getInstalledAppsVersion().drop(1).collect {
+                refreshInstalledApps(forceReload = false, includeShortcuts = true)
+            }
+        }
+    }
+
+    private fun observeRemovedPackages() {
+        viewModelScope.launch {
+            appRepository.getRemovedPackages().collect { removedApp ->
+                pruneStateAfterPackageRemoved(removedApp.packageName, removedApp.profileKey)
+            }
+        }
+    }
+
+    /**
+     * Pre-warms the app cache and builds the package-name → label map
+     * used to resolve real app names for home-screen favorites.
+     */
+    fun refreshInstalledApps(forceReload: Boolean = true, includeShortcuts: Boolean = false) {
+        viewModelScope.launch(Dispatchers.IO) {
+            refreshInstalledAppsLocked(forceReload)
+            if (includeShortcuts) {
+                _allShortcutActions.value = appRepository.getAllShortcutActions()
+            }
+        }
+    }
+
+    private suspend fun refreshInstalledAppsLocked(forceReload: Boolean) {
+        installedAppsRefreshMutex.withLock {
+            val recoveredAfterFirstPass = runInstalledAppsRefreshPass(forceReload)
+            if (recoveredAfterFirstPass) {
+                appRepository.invalidateCacheForRetry()
+                runInstalledAppsRefreshPass(forceReload = false)
+            }
+        }
+    }
+
+    /**
+     * Reloads installed apps without treating absence from a launcher snapshot as an uninstall.
+     * Returns true when favorites are missing from the snapshot so callers may retry once.
+     */
+    private suspend fun runInstalledAppsRefreshPass(forceReload: Boolean): Boolean {
+        if (forceReload) {
+            appRepository.invalidateCache()
+        }
+        val apps = appRepository.getInstalledApps()
+        val archivedApps = appRepository.getArchivedApps()
+        // Read DataStore directly: refresh runs on Dispatchers.IO and can race ahead of
+        // rawFavorites' Main-thread stateIn collector during ViewModel init.
+        val currentFavorites = preferencesManager.favoritesFlow.first()
+        val snapshotProfiles = snapshotProfileKeys(apps, archivedApps)
+        Log.i(
+                TAG,
+                "refresh pass forceReload=$forceReload apps=${apps.size} " +
+                        "owner=${apps.count { it.userHandle == null }} " +
+                        "secondary=${apps.count { it.userHandle != null }} " +
+                        "archived=${archivedApps.size} profiles=$snapshotProfiles " +
+                        "favorites=${currentFavorites.size} " +
+                        "prevApps=${_allInstalledApps.value.size}",
+        )
+        if (apps.isEmpty()) {
+            if (archivedApps.isNotEmpty()) {
+                applyInstalledAppsSnapshot(apps)
+                return false
+            }
+            if (_allInstalledApps.value.isNotEmpty() ||
+                            currentFavorites.any { !it.isPhoneFavoriteSentinel() }
+            ) {
+                Log.w(
+                        TAG,
+                        "skipping empty launcher snapshot; keeping " +
+                                "prevApps=${_allInstalledApps.value.size} " +
+                                "favorites=${currentFavorites.size}",
+                )
+                return false
+            }
+            applyInstalledAppsSnapshot(apps)
+            return false
+        }
+        val incompleteOwnerSnapshot = isIncompleteOwnerAppsSnapshot(apps)
+        val hasPreviousOwnerApps = _allInstalledApps.value.any { it.userHandle == null }
+        val hasOwnerFavorites =
+                currentFavorites.any { !it.isPhoneFavoriteSentinel() && it.profileKey == "0" }
+        if (incompleteOwnerSnapshot && (hasPreviousOwnerApps || hasOwnerFavorites)) {
+            Log.w(
+                    TAG,
+                    "skipping incomplete owner snapshot " +
+                            "(secondary-only apps=${apps.size} profiles=$snapshotProfiles); " +
+                            "keeping prevApps=${_allInstalledApps.value.size} " +
+                            "favorites=${currentFavorites.size}",
+            )
+            return true
+        }
+        applyInstalledAppsSnapshot(apps)
+        val installedAppKeys = apps.map { appMetadataKey(it) }.toSet()
+        val archivedAppKeys = _archivedAppKeys.value
+        val missingFavoriteKeys =
+                currentFavorites
+                        .asSequence()
+                        .filterNot { it.isPhoneFavoriteSentinel() }
+                        .map { favoriteAppStableKey(it) }
+                        .filterNot { it in installedAppKeys || it in archivedAppKeys }
+                        .toSet()
+        if (missingFavoriteKeys.isNotEmpty()) {
+            Log.w(
+                    TAG,
+                    "launcher snapshot is missing ${missingFavoriteKeys.size} favorites; " +
+                            "keeping persisted favorites and retrying: $missingFavoriteKeys",
+            )
+        }
+        return missingFavoriteKeys.isNotEmpty()
+    }
+
+    private fun snapshotProfileKeys(apps: List<AppInfo>, archivedApps: List<AppInfo>): Set<String> {
+        val keys = LinkedHashSet<String>()
+        for (app in apps) keys += appProfileKey(app.userHandle)
+        for (app in archivedApps) keys += appProfileKey(app.userHandle)
+        return keys
+    }
+
+    /** Secondary-only list while the owner user should still have launchable apps. */
+    private fun isIncompleteOwnerAppsSnapshot(apps: List<AppInfo>): Boolean {
+        if (apps.isEmpty()) return false
+        val hasOwnerApps = apps.any { it.userHandle == null }
+        val hasSecondaryApps = apps.any { it.userHandle != null }
+        return !hasOwnerApps && hasSecondaryApps
+    }
+
+    private fun applyInstalledAppsSnapshot(apps: List<AppInfo>) {
+        _allInstalledApps.value = apps
+        _appNameMap.value = apps.associate { appMetadataKey(it) to it.label }
+        _archivedAppKeys.value =
+                appRepository.getArchivedApps().mapTo(mutableSetOf()) {
+                    drawerOpenCountKey(it.packageName, it.userHandle)
+                }
+    }
+
+    private fun loadInstalledAppsForEditing(
+        includeShortcutActions: Boolean = false
+    ) {
+        val apps = appRepository.getInstalledApps()
+        applyInstalledAppsSnapshot(apps)
+        if (includeShortcutActions) {
+            _allShortcutActions.value = appRepository.getAllShortcutActions()
+        }
+    }
+
+    // ── Long-press → open app menu directly ────────────────────────
+
+    fun onFavoriteLongPress(fav: FavoriteApp) {
+        _appMenuTarget.value = fav
+
+        viewModelScope.launch {
+            val user = appRepository.getUserHandleForProfile(fav.profileKey) ?: Process.myUserHandle()
+            _appMenuShortcuts.value =
+                    appRepository.getShortcutsForApp(fav.packageName, user).take(MAX_APP_MENU_SHORTCUTS)
+        }
+    }
+
+    fun onHomeScreenLongPress() {
+        _showHomeScreenMenu.value = true
+    }
+
+    fun dismissHomeScreenMenu() {
+        _showHomeScreenMenu.value = false
+    }
+
+    /** Dismiss home long-press sheets when the system home button is pressed. */
+    fun dismissHomeOverlays() {
+        dismissHomeScreenMenu()
+        dismissAppMenu()
+        dismissNoteEditor()
+    }
+
+    // ── Edit flows ──────────────────────────────────────────────────
+
+    fun startEditingHomeApps() = startEditingHome(includeShortcutActions = false)
+
+    fun startEditingShortcuts() = startEditingHome(includeShortcutActions = true)
+
+    private fun startEditingHome(includeShortcutActions: Boolean) {
+        dismissAppMenu()
+        if (includeShortcutActions) {
+            if (!isEditingRightShortcuts) {
+                isEditingRightShortcuts = true
+                // Use eager prefs — [rightSideShortcuts] is WhileSubscribed and may still be
+                // emptyList() when Edit Shortcuts opens from Settings (Home not collecting).
+                _editRightShortcuts.value = rightSideShortcutsSnapshotForEdit()
+            }
+        } else if (!isEditingHomeApps) {
+            isEditingHomeApps = true
+            // Use eager [rawFavorites] — [favorites] is WhileSubscribed and may still be
+            // emptyList() when Edit Home Apps opens from Settings (Home not collecting).
+            _editFavorites.value = favoritesSnapshotForEdit()
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            loadInstalledAppsForEditing(includeShortcutActions)
+        }
+    }
+
+    private fun favoritesSnapshotForEdit(): List<FavoriteApp> =
+            resolveFavoritesSnapshot(
+                    rawFavorites.value,
+                    _renameMap.value,
+                    _appNameMap.value,
+                    _archivedAppKeys.value,
+            )
+
+    private fun rightSideShortcutsSnapshotForEdit(): List<HomeShortcut> {
+        val archivedKeys = _archivedAppKeys.value
+        return rawRightSideShortcuts.value.filterNot { shortcutArchivedKey(it) in archivedKeys }
+    }
+
+    /** Metadata row a favorite owns: its own shortcut row for PWAs, else the host app row. */
+    private fun favoriteMetadataShortcutId(favorite: FavoriteApp): String =
+            favoriteLauncherShortcutId(favorite) ?: HOST_APP_METADATA_SENTINEL
+
+    private fun resolveFavoritesSnapshot(
+            favs: List<FavoriteApp>,
+            renames: Map<String, String>,
+            appNames: Map<String, String>,
+            archivedKeys: Set<String>,
+    ): List<FavoriteApp> =
+            favs.filterNot { favoriteAppStableKey(it) in archivedKeys }.map { fav ->
+                val appKey = favoriteAppStableKey(fav)
+                // PWA rows only answer to their own key; the package-wide keys belong to the
+                // host app and would show the browser name on every PWA.
+                val hostKey =
+                        appMetadataKey(fav.packageName, fav.profileKey).takeIf {
+                            favoriteLauncherShortcutId(fav) == null
+                        }
+                val resolvedName =
+                        renames[appKey]
+                                ?: hostKey?.let { renames[it] }
+                                ?: appNames[appKey]
+                                ?: hostKey?.let { appNames[it] }
+                                ?: fav.label
+                fav.copy(label = resolvedName)
+            }
+
+    fun toggleAppOnHomeScreen(app: AppInfo) {
+        val current = _editFavorites.value.toMutableList()
+        val stableKey = appMetadataKey(app)
+        current.toggleItem(
+                predicate = { favoriteAppStableKey(it) == stableKey },
+                factory = {
+                    val resolvedName =
+                            _renameMap.value[appMetadataKey(app)] ?: app.label
+                    val iconPackage =
+                            app.launcherShortcutId?.let { shortcutId ->
+                                ShortcutTarget.encode(
+                                        ShortcutTarget.LauncherShortcut(
+                                                packageName = app.packageName,
+                                                shortcutId = shortcutId,
+                                        )
+                                )
+                            }
+                                    ?: ""
+                    FavoriteApp(
+                            label = resolvedName,
+                            packageName = app.packageName,
+                            iconName = "circle",
+                            iconPackage = iconPackage,
+                            profileKey = appProfileKey(app.userHandle),
+                    )
+                },
+        )
+        _editFavorites.value = current
+    }
+
+    /** Removes a home favorite during edit mode, including built-in rows with no installed app. */
+    fun removeFavoriteFromEdit(fav: FavoriteApp) {
+        val key = favoriteAppStableKey(fav)
+        _editFavorites.value = _editFavorites.value.filterNot { favoriteAppStableKey(it) == key }
+    }
+
+    private fun <T> reorderInList(items: List<T>, from: Int, to: Int): List<T>? {
+        if (from !in items.indices || to !in items.indices) return null
+        val next = items.toMutableList()
+        val item = next.removeAt(from)
+        next.add(to, item)
+        return next
+    }
+
+    fun reorderFavorite(from: Int, to: Int) {
+        _editFavorites.value = reorderInList(_editFavorites.value, from, to) ?: return
+    }
+
+    fun saveEditedFavorites() {
+        val toSave = _editFavorites.value
+        viewModelScope.launch {
+            try {
+                preferencesManager.setFavorites(toSave)
+            } finally {
+                // Keep the session until persist finishes so a quick re-entry cannot reload stale prefs.
+                isEditingHomeApps = false
+            }
+        }
+    }
+
+    fun toggleRightShortcut(action: AppShortcutAction) {
+        val current = _editRightShortcuts.value.toMutableList()
+        current.toggleItem(
+                predicate = { it.target == action.target && it.profileKey == action.profileKey },
+                factory = {
+                    HomeShortcut(
+                            iconName = inferIconNameForAction(action),
+                            target = action.target,
+                            profileKey = action.profileKey,
+                    )
+                },
+        )
+        _editRightShortcuts.value = current
+    }
+
+    fun reorderRightShortcut(from: Int, to: Int) {
+        _editRightShortcuts.value = reorderInList(_editRightShortcuts.value, from, to) ?: return
+    }
+
+    fun updateShortcutIcon(index: Int, iconName: String) {
+        val current = _editRightShortcuts.value.toMutableList()
+        if (index in current.indices) {
+            current[index] = current[index].copy(iconName = iconName)
+            _editRightShortcuts.value = current
+        }
+    }
+
+    fun saveEditedRightShortcuts() {
+        val toSave = _editRightShortcuts.value
+        viewModelScope.launch {
+            try {
+                preferencesManager.setRightSideShortcuts(toSave)
+            } finally {
+                // Keep the session until persist finishes so a quick re-entry cannot reload stale prefs.
+                isEditingRightShortcuts = false
+            }
+        }
+    }
+
+    // ── Remove ──────────────────────────────────────────────────────
+
+    fun removeFavorite(fav: FavoriteApp) {
+        viewModelScope.launch {
+            val current = rawFavorites.value.toMutableList()
+            current.removeAll { it.matches(fav.packageName, fav.profileKey) }
+            preferencesManager.setFavorites(current)
+        }
+        dismissAppMenu()
+    }
+
+    fun dismissAppMenu() {
+        _appMenuTarget.value = null
+        _appMenuShortcuts.value = emptyList()
+    }
+
+    fun openWeatherAppPicker() {
+        preferredWeatherTap.value?.let { tap ->
+            if (launchWidgetTapTarget(tap)) return
+            Toast.makeText(
+                context,
+                context.getString(R.string.toast_weather_app_launch_failed),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        _showWeatherAppPicker.value = true
+    }
+
+    fun closeWeatherAppPicker() {
+        _showWeatherAppPicker.value = false
+    }
+
+    fun setPreferredWeatherTap(action: AppShortcutAction) {
+        viewModelScope.launch {
+            preferencesManager.setPreferredWeatherTap(
+                    WidgetTapTarget(action.target, action.profileKey)
+            )
+            _showWeatherAppPicker.value = false
+        }
+    }
+
+    fun renameApp(favorite: FavoriteApp, newName: String) {
+        viewModelScope.launch {
+            if (favorite.packageName == ShortcutTarget.PHONE_FAVORITE_SENTINEL_PACKAGE) {
+                val current = preferencesManager.favoritesFlow.first().toMutableList()
+                val idx = current.indexOfFirst { it.matches(favorite.packageName, favorite.profileKey) }
+                if (idx >= 0) {
+                    current[idx] = current[idx].copy(label = newName.trim())
+                    preferencesManager.setFavorites(current)
+                }
+            } else {
+                appRepository.renameApp(
+                        favorite.packageName,
+                        favorite.profileKey,
+                        newName,
+                        favoriteMetadataShortcutId(favorite),
+                )
+            }
+            dismissAppMenu()
+        }
+    }
+
+    fun getCategoryForFavorite(fav: FavoriteApp): String {
+        return installedAppFor(fav.packageName, fav.profileKey)?.category.orEmpty()
+    }
+
+    fun setFavoriteCategory(favorite: FavoriteApp, category: String) {
+        if (favorite.isPhoneFavoriteSentinel()) {
+            dismissAppMenu()
+            return
+        }
+        viewModelScope.launch {
+            appRepository.setAppCategory(favorite.packageName, favorite.profileKey, category)
+            refreshInstalledApps(forceReload = false)
+            dismissAppMenu()
+        }
+    }
+
+    fun hideApp(favorite: FavoriteApp) {
+        if (endAppMenuIfPhoneFavoriteSentinel(favorite)) return
+        viewModelScope.launch {
+            appRepository.hideApp(
+                    favorite.packageName,
+                    favorite.profileKey,
+                    favoriteMetadataShortcutId(favorite),
+            )
+            val current = rawFavorites.value.toMutableList()
+            val favoriteKey = favoriteAppStableKey(favorite)
+            current.removeAll { favoriteAppStableKey(it) == favoriteKey }
+            preferencesManager.setFavorites(current)
+        }
+        dismissAppMenu()
+    }
+
+    fun openAppInfo(favorite: FavoriteApp) {
+        if (endAppMenuIfPhoneFavoriteSentinel(favorite)) return
+        val installed = installedAppFor(favorite.packageName, favorite.profileKey)
+        appRepository.openAppInfo(
+                favorite.packageName,
+                installed?.userHandle,
+                installed?.componentName,
+        )
+        dismissAppMenu()
+    }
+
+    fun uninstallApp(favorite: FavoriteApp) =
+            startPackageScopedIntent(favorite, Intent.ACTION_DELETE)
+
+    // ── Clock / Battery / Weather ───────────────────────────────────
+
+    private fun startClockTicker() {
+        viewModelScope.launch {
+            var lastLocale: Locale? = null
+            var lastIs24Hour: Boolean? = null
+            var timeFormat: JavaDateFormat? = null
+            while (true) {
+                if (clockFormatNeedsRefresh) {
+                    clockFormatNeedsRefresh = false
+                    timeFormat = null
+                }
+                val now = Date()
+                val locale = Locale.getDefault()
+                val is24Hour = DateFormat.is24HourFormat(context)
+                if (
+                    locale != lastLocale ||
+                        is24Hour != lastIs24Hour ||
+                        timeFormat == null
+                ) {
+                    lastLocale = locale
+                    lastIs24Hour = is24Hour
+                    timeFormat = DateFormat.getTimeFormat(context)
+                }
+                val current = _clockUiState.value
+                val updated =
+                    current.copy(
+                        currentTime =
+                                clockDisplayTimeWithoutDayPeriod(
+                                        timeFormat.format(now),
+                                        is24Hour,
+                                ),
+                        currentDate =
+                                formatHomeDate(now, locale, _homeDateFormatStyle.value),
+                        is24HourFormat = is24Hour,
+                    )
+                if (updated != current) {
+                    _clockUiState.value = updated
+                }
+                if ((now.time / 1000) % 60 == 0L) {
+                    refreshNextAlarm()
+                }
+                refreshWorldClockTimes(now.time)
+                refreshCountdownRemaining(now.time)
+                delay(1_000)
+            }
+        }
+    }
+
+    private fun registerPrivateNotExportedReceiver(
+        receiver: BroadcastReceiver,
+        filter: IntentFilter
+    ) {
+        try {
+            context.registerBroadcastReceiverNotExported(receiver, filter)
+        } catch (_: Exception) { }
+    }
+
+    private fun registerBatteryReceiver() {
+        registerPrivateNotExportedReceiver(
+            batteryChangedReceiver,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        )
+    }
+
+    private fun registerTimezoneChangedReceiver() {
+        registerPrivateNotExportedReceiver(
+            timezoneChangedReceiver,
+            IntentFilter(Intent.ACTION_TIMEZONE_CHANGED)
+        )
+    }
+
+    private fun registerAlarmChangedReceiver() {
+        registerPrivateNotExportedReceiver(
+            alarmChangedReceiver,
+            IntentFilter(AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED)
+        )
+    }
+
+    private fun setBatteryPercentFromIntent(intent: Intent) {
+        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+        val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+        val isCharging =
+                status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                        status == BatteryManager.BATTERY_STATUS_FULL
+        val percent = if (level >= 0 && scale > 0) (level * 100) / scale else 0
+        val current = _clockUiState.value
+        if (current.batteryPercent != percent || current.isCharging != isCharging) {
+            _clockUiState.value = current.copy(batteryPercent = percent, isCharging = isCharging)
+        }
+    }
+
+    private fun refreshNextAlarm() {
+        try {
+            val alarmManager =
+                    context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+            val nextAlarm = alarmManager.nextAlarmClock
+            val alarmText = if (nextAlarm != null) {
+                formatNextAlarm(nextAlarm.triggerTime)
+            } else {
+                null
+            }
+            val current = _clockUiState.value
+            if (current.nextAlarm != alarmText) {
+                _clockUiState.value = current.copy(nextAlarm = alarmText)
+            }
+        } catch (_: Exception) {
+            // Ignore; mocked/restricted contexts may not expose AlarmManager.
+        }
+    }
+
+    private fun formatNextAlarm(triggerTime: Long): String {
+        val is24Hour = DateFormat.is24HourFormat(context)
+        val skeleton = if (is24Hour) "E HHmm" else "E hmm"
+        val pattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), skeleton)
+        return DateFormat.format(pattern, triggerTime).toString()
+    }
+
+    private fun updateBattery() {
+        try {
+            val batteryIntent =
+                    context.registerStickyBroadcastReceiverNotExported(
+                            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+                    )
+            if (batteryIntent != null) {
+                setBatteryPercentFromIntent(batteryIntent)
+            } else {
+                _clockUiState.value =
+                        _clockUiState.value.copy(batteryPercent = 0, isCharging = false)
+            }
+        } catch (_: Exception) {
+            _clockUiState.value =
+                    _clockUiState.value.copy(batteryPercent = 0, isCharging = false)
+        }
+    }
+
+    private fun startWeatherTicker() {
+        if (weatherTickerJob?.isActive == true) return
+        weatherTickerJob = viewModelScope.launch(Dispatchers.IO) {
+            while (true) {
+                fetchWeatherOnce()
+                fetchWorldClockWeatherOnce()
+                delay(30 * 60 * 1000L)
+            }
+        }
+    }
+
+    private fun stopWeatherTicker() {
+        weatherTickerJob?.cancel()
+        weatherTickerJob = null
+    }
+
+    private fun syncWeatherTicker() {
+        val needTicker = _uiState.value.showHomeWeather || showWorldClockWeather
+        if (needTicker) {
+            startWeatherTicker()
+        } else {
+            stopWeatherTicker()
+        }
+    }
+
+    private fun observeHomeAlignment() {
+        observeFlow(preferencesManager.homeAlignmentFlow) { alignment ->
+            _uiState.value = _uiState.value.copy(homeAlignment = alignment)
+        }
+    }
+
+    private fun observeHomeAppIcons() {
+        observeFlow(
+            combine(
+                preferencesManager.homeAppIconModeFlow,
+                preferencesManager.useArcticonsDrawerIconsFlow,
+                arcticonsIconPackRepository.installedPackage,
+            ) { mode, enabled, installed ->
+                if (!enabled || installed == null) HomeAppIconMode.TEXT else HomeAppIconMode.fromStored(mode)
+            }
+        ) { mode ->
+            _uiState.value = _uiState.value.copy(homeAppIconMode = mode)
+            if (mode != HomeAppIconMode.TEXT) {
+                viewModelScope.launch { arcticonsIconPackRepository.warmUp() }
+            }
+        }
+    }
+
+    suspend fun loadArcticonsIcon(app: AppInfo) = arcticonsIconPackRepository.getIcon(app)
+
+    fun refreshArcticonsInstallState() = arcticonsIconPackRepository.refreshInstalledPackage()
+
+    private fun observeLauncherFontScale() {
+        observeFlow(preferencesManager.launcherFontScaleFlow) { scale ->
+            _uiState.value = _uiState.value.copy(launcherFontScale = scale)
+        }
+    }
+
+    private fun observePhotoWallpaperAppearance() {
+        observeFlow(
+                combine(
+                        preferencesManager.launcherAppearanceFlow,
+                        preferencesManager.photoWallpaperOutlineWidthDpFlow,
+                ) { appearance, outlineWidthDp ->
+                    appearance.usesPhotoWallpaper to outlineWidthDp
+                }
+        ) { (usesPhoto, outlineWidthDp) ->
+            _uiState.value =
+                    _uiState.value.copy(
+                            usesPhotoWallpaper = usesPhoto,
+                            photoWallpaperOutlineWidthDp = outlineWidthDp,
+                    )
+        }
+    }
+
+    private fun observeHomeDateFormatStyle() {
+        observeFlow(preferencesManager.homeDateFormatStyleFlow) { style ->
+            _homeDateFormatStyle.value = style
+            val now = Date()
+            val locale = Locale.getDefault()
+            val current = _clockUiState.value
+            _clockUiState.value = current.copy(currentDate = formatHomeDate(now, locale, style))
+        }
+    }
+
+    private fun observeTemperatureUnit() {
+        observeFlow(preferencesManager.temperatureUnitFlow) { unit ->
+            _temperatureUnit.value = unit
+            if (showWorldClockWeather) {
+                refreshWorldClockWeather()
+            }
+        }
+    }
+
+    private fun observeAirQualityScale() {
+        observeFlow(preferencesManager.airQualityScaleFlow.distinctUntilChanged()) { scale ->
+            if (_airQualityScale.value != scale) {
+                _airQualityScale.value = scale
+                if (showHomeAirQuality && _uiState.value.showHomeWeather) {
+                    refreshWeather()
+                }
+            }
+        }
+    }
+
+    private fun observeHomeWidgetItemPreferences() {
+        observeFlow(preferencesManager.homeWidgetVisibilityFlow) { v ->
+            _uiState.value =
+                    _uiState.value.copy(
+                            showHomeClock = v.showClock,
+                            showHomeDate = v.showDate,
+                            showHomeWeather = v.showWeather,
+                            showHomeBattery = v.showBattery,
+                    )
+        }
+    }
+
+    private fun observeWeatherRefreshTriggers() {
+        observeFlow(preferencesManager.showHomeWeatherFlow.distinctUntilChanged()) { showWeather ->
+            if (showWeather) {
+                refreshWeather()
+            } else {
+                applyWeatherUiState(hiddenWeatherState())
+            }
+            syncWeatherTicker()
+        }
+        observeFlow(preferencesManager.showHomeAirQualityFlow.distinctUntilChanged()) { showAqi ->
+            showHomeAirQuality = showAqi
+            if (_uiState.value.showHomeWeather) {
+                refreshWeather()
+            }
+        }
+    }
+
+    private fun observeWorldClockWeatherPreference() {
+        observeFlow(preferencesManager.showWorldClockWeatherFlow.distinctUntilChanged()) { show ->
+            showWorldClockWeather = show
+            if (show) {
+                refreshWorldClockWeather()
+            } else {
+                worldClockWeatherTexts = emptyMap()
+                refreshWorldClockTimes()
+            }
+            syncWeatherTicker()
+        }
+    }
+
+    private fun observeDoubleTapEmptyLock() {
+        observeFlow(
+                combine(
+                        preferencesManager.doubleTapEmptyLockFlow,
+                        preferencesManager.doubleTapEmptyTargetFlow,
+                ) { lockEnabled, target -> lockEnabled to target }
+        ) { (lockEnabled, target) ->
+            recomputeDoubleTapEmptyUi(lockEnabled, target)
+        }
+    }
+
+    // ── Media widget ────────────────────────────────────────────────
+
+    private var mediaEnabled = false
+    private fun observeMedia() {
+        observeFlow(preferencesManager.showHomeMediaFlow) { enabled ->
+            mediaEnabled = enabled && MediaNotificationHelper.isListenerEnabled(context)
+            _mediaUiState.value = _mediaUiState.value.copy(enabled = mediaEnabled)
+            mediaRepository.setWidgetEnabled(mediaEnabled)
+        }
+        observeFlow(mediaRepository.state) { playback ->
+            _mediaUiState.value = _mediaUiState.value.copy(playback = playback)
+        }
+    }
+
+    /** Re-reads active sessions on resume so newly started playback appears promptly. */
+    fun refreshMedia() {
+        if (mediaEnabled) {
+            mediaRepository.refreshNotificationSessions()
+        }
+    }
+
+    fun mediaOpenApp() = mediaRepository.openMediaApp()
+
+    fun mediaPlayPause() = mediaRepository.playPause()
+
+    fun mediaSkipToPrevious() = mediaRepository.skipToPrevious()
+
+    fun mediaSkipToNext() = mediaRepository.skipToNext()
+
+    fun mediaLike() = mediaRepository.invokeLikeAction()
+
+    fun mediaSave() = mediaRepository.invokeSaveAction()
+
+    // ── Pomodoro widget ─────────────────────────────────────────────
+
+    fun pomodoroTogglePlayPause() = pomodoroRepository.togglePlayPause()
+
+    fun pomodoroAdjustMinutes(deltaMinutes: Int) = pomodoroRepository.adjustMinutes(deltaMinutes)
+
+    fun pomodoroSelectMode(mode: PomodoroMode) = pomodoroRepository.selectMode(mode)
+
+    // ── Notification indicators ─────────────────────────────────────
+
+    private var notificationIndicatorsPrefEnabled = false
+
+    private fun observeNotificationIndicators() {
+        observeFlow(preferencesManager.showNotificationIndicatorsFlow) { enabled ->
+            notificationIndicatorsPrefEnabled = enabled
+            applyNotificationIndicatorTracking()
+        }
+        observeFlow(preferencesManager.notificationIndicatorStyleFlow) { style ->
+            _notificationIndicatorUiState.value =
+                    _notificationIndicatorUiState.value.copy(style = style)
+        }
+        observeFlow(preferencesManager.notificationIndicatorColorFlow) { colorArgb ->
+            _notificationIndicatorUiState.value =
+                    _notificationIndicatorUiState.value.copy(colorArgb = colorArgb)
+        }
+        observeFlow(notificationIndicatorRepository.appsWithNotifications) { keys ->
+            _notificationIndicatorUiState.value =
+                    _notificationIndicatorUiState.value.copy(appsWithNotifications = keys)
+        }
+    }
+
+    private fun applyNotificationIndicatorTracking() {
+        val enabled =
+                notificationIndicatorsPrefEnabled &&
+                        MediaNotificationHelper.isListenerEnabled(context)
+        _notificationIndicatorUiState.value =
+                _notificationIndicatorUiState.value.copy(enabled = enabled)
+        notificationIndicatorRepository.setTrackingEnabled(
+                NotificationIndicatorRepository.CONSUMER_HOME,
+                enabled,
+        )
+    }
+
+    /** Re-checks listener access on resume so revoked permission disables indicators. */
+    fun refreshNotificationIndicators() {
+        applyNotificationIndicatorTracking()
+    }
+
+    // ── Screen time widget ──────────────────────────────────────────
+
+    private fun observeScreenTime() {
+        observeFlow(preferencesManager.showHomeScreenTimeFlow) { enabled ->
+            if (!enabled) {
+                _screenTimeUiState.value = HomeScreenTimeUiState()
+            } else {
+                refreshScreenTime()
+            }
+        }
+    }
+
+    fun refreshScreenTime() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val prefEnabled = preferencesManager.showHomeScreenTimeFlow.first()
+            if (!prefEnabled) {
+                _screenTimeUiState.value = HomeScreenTimeUiState()
+                return@launch
+            }
+            if (!UsageStatsHelper.hasUsageAccess(context)) {
+                _screenTimeUiState.value = HomeScreenTimeUiState()
+                return@launch
+            }
+            val totalMs = screenTimeRepository.queryLast24HoursTotalMs() ?: 0L
+            _screenTimeUiState.value =
+                    HomeScreenTimeUiState(
+                            enabled = true,
+                            durationText = formatScreenTimeDuration(totalMs),
+                    )
+        }
+    }
+
+    fun openDigitalWellbeing() {
+        if (!DigitalWellbeingHelper.openDashboard(context)) {
+            Toast.makeText(
+                            context,
+                            context.getString(R.string.toast_digital_wellbeing_launch_failed),
+                            Toast.LENGTH_SHORT,
+                    )
+                    .show()
+        }
+    }
+
+    // ── Note widget ─────────────────────────────────────────────────
+
+    private fun observeNote() {
+        observeFlow(
+            combine(
+                preferencesManager.showHomeNoteFlow,
+                preferencesManager.homeNoteTextFlow,
+            ) { show, text -> HomeNoteUiState(showWidget = show, text = text) }
+        ) { _noteUiState.value = it }
+    }
+
+    fun updateNoteDraft(text: String) {
+        _noteDraft.value = text
+    }
+
+    fun openNoteEditor() {
+        if (_noteDraft.value == null) _noteDraft.value = _noteUiState.value.text
+        _showNoteEditor.value = true
+    }
+
+    fun dismissNoteEditor() {
+        if (clearingNote) return
+        val draft = _noteDraft.value
+        if (draft != null && (draft != _noteUiState.value.text || noteSaveFailed)) {
+            saveHomeNote(draft)
+        } else {
+            _noteDraft.value = null
+            _showNoteEditor.value = false
+        }
+    }
+
+    fun saveHomeNote(text: String) {
+        val savedText = text
+        _noteUiState.value = _noteUiState.value.copy(text = savedText)
+        _noteDraft.value = null
+        _showNoteEditor.value = false
+        viewModelScope.launch {
+            try {
+                preferencesManager.setHomeNoteText(savedText)
+                if (_noteUiState.value.text == savedText) noteSaveFailed = false
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                if (_noteDraft.value == null && _noteUiState.value.text == savedText) {
+                    _noteDraft.value = savedText
+                    noteSaveFailed = true
+                }
+                _noteStorageErrors.emit(Unit)
+            }
+        }
+    }
+
+    suspend fun clearHomeNote(draft: String): Boolean = viewModelScope.async {
+        if (clearingNote) return@async false
+        clearingNote = true
+        try {
+            preferencesManager.startNewHomeNote(draft)
+            _noteUiState.value = _noteUiState.value.copy(text = "")
+            _noteDraft.value = ""
+            noteSaveFailed = false
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            _noteStorageErrors.emit(Unit)
+            false
+        } finally {
+            clearingNote = false
+        }
+    }.await()
+
+    fun toggleHomeNoteTask(lineIndex: Int) {
+        viewModelScope.launch {
+            try {
+                preferencesManager.updateHomeNoteText { toggleNoteTask(it, lineIndex) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _noteStorageErrors.emit(Unit)
+            }
+        }
+    }
+
+    private fun observeHomeExtraWidgets() {
+        observeFlow(preferencesManager.homeExtraWidgetsFlow) { entries ->
+            _homeExtraWidgets.value = entries
+            refreshWorldClockTimes()
+            refreshCountdownRemaining()
+        }
+    }
+
+    private fun observeWorldClock() {
+        observeFlow(preferencesManager.worldClockCitiesFlow) { cities ->
+            worldClockCities = cities
+            refreshWorldClockTimes()
+            if (showWorldClockWeather) {
+                refreshWorldClockWeather()
+            }
+        }
+    }
+
+    private fun refreshWorldClockTimes(nowMillis: Long = System.currentTimeMillis()) {
+        if (worldClockCities.isEmpty() || homeExtraWorldClockCount(_homeExtraWidgets.value) == 0) {
+            val cleared = HomeWorldClockUiState()
+            if (_worldClockUiState.value != cleared) {
+                _worldClockUiState.value = cleared
+            }
+            return
+        }
+        val weatherById = if (showWorldClockWeather) worldClockWeatherTexts else emptyMap()
+        val formatted =
+                formatWorldClockCities(context, worldClockCities, nowMillis).map { city ->
+                    city.copy(weatherText = weatherById[city.id])
+                }
+        val updated = HomeWorldClockUiState(citiesById = formatted.associateBy { it.id })
+        if (updated != _worldClockUiState.value) {
+            _worldClockUiState.value = updated
+        }
+    }
+
+    private fun refreshWorldClockWeather() {
+        worldClockWeatherFetchJob?.cancel()
+        worldClockWeatherFetchJob =
+                viewModelScope.launch(Dispatchers.IO) { fetchWorldClockWeatherOnce() }
+    }
+
+    private suspend fun fetchWorldClockWeatherOnce() {
+        if (!showWorldClockWeather || worldClockCities.isEmpty()) {
+            if (worldClockWeatherTexts.isNotEmpty()) {
+                worldClockWeatherTexts = emptyMap()
+                refreshWorldClockTimes()
+            }
+            return
+        }
+        val useFahrenheit = TemperatureUnitHelper.useFahrenheit(context, _temperatureUnit.value)
+        val suffix = if (useFahrenheit) "\u00B0F" else "\u00B0C"
+        val next = linkedMapOf<String, String>()
+        for (city in worldClockCities) {
+            val place =
+                    city.label.trim().ifBlank { ianaLeafLabel(city.timeZoneId) }
+            val weather =
+                    weatherRepository.getWeatherForPlace(
+                            place,
+                            useFahrenheit = useFahrenheit,
+                    )
+            if (weather != null) {
+                next[city.id] = "${weather.temperature}$suffix"
+            }
+        }
+        worldClockWeatherTexts = next
+        refreshWorldClockTimes()
+    }
+
+    private fun observeCountdown() {
+        observeFlow(preferencesManager.countdownEventsFlow) { events ->
+            countdownEvents = events
+            refreshCountdownRemaining()
+        }
+    }
+
+    private fun refreshCountdownRemaining(nowMillis: Long = System.currentTimeMillis()) {
+        if (countdownEvents.isEmpty()) {
+            val cleared = HomeCountdownUiState()
+            if (_countdownUiState.value != cleared) {
+                _countdownUiState.value = cleared
+            }
+            return
+        }
+        val nowLabel = context.getString(R.string.home_countdown_now)
+        val pastLabel = context.getString(R.string.home_countdown_past)
+        val formatted =
+                countdownEvents.associate { event ->
+                    val remainingMillis =
+                            millisUntilCountdown(event.targetEpochMillis, nowMillis)
+                    val remaining =
+                            formatCountdownRemaining(
+                                    remainingMillis = remainingMillis,
+                                    nowLabel = nowLabel,
+                                    pastLabel = pastLabel,
+                            )
+                    event.id to
+                            CountdownEventUi(
+                                    id = event.id,
+                                    title = event.title,
+                                    remainingText = remaining,
+                            )
+                }
+        val updated = HomeCountdownUiState(eventsById = formatted)
+        if (updated != _countdownUiState.value) {
+            _countdownUiState.value = updated
+        }
+    }
+
+    private fun observeCategoryOptions() {
+        observeFlow(
+                combine(
+                        _allInstalledApps,
+                        appRepository.getAllCategoryDefinitions(),
+                        appRepository.getSuppressedCategoryDefinitions(),
+                ) { apps, definitions, suppressed ->
+                    val defined = definitions.map { it.name.trim() }.filter { it.isNotBlank() }
+                    val appCategories = apps.map { it.category.trim() }.filter { it.isNotBlank() }
+                    val dynamic = dynamicCategoryExtras(appCategories, defined, suppressed)
+                    (defined + dynamic)
+                            .distinctBy { it.lowercase() }
+                            .filterNot(::isHomeCategoryPickerReserved)
+                            .sortedWith(String.CASE_INSENSITIVE_ORDER)
+                }
+        ) { categories ->
+            _categoryOptions.value = categories
+        }
+    }
+
+    fun refreshDoubleTapLockEffective() {
+        viewModelScope.launch {
+            recomputeDoubleTapEmptyUi(
+                    preferencesManager.doubleTapEmptyLockFlow.first(),
+                    preferencesManager.doubleTapEmptyTargetFlow.first(),
+            )
+        }
+    }
+
+    private fun recomputeDoubleTapEmptyUi(
+            lockEnabled: Boolean,
+            target: WidgetTapTarget?,
+    ) {
+        val svcEnabled = LockScreenHelper.isLockAccessibilityServiceEnabled(context)
+        _uiState.value =
+            _uiState.value.copy(
+                    doubleTapEmptyLockEnabled = lockEnabled && svcEnabled,
+                    doubleTapEmptyActionEnabled = lockEnabled || target != null,
+            )
+    }
+
+    private fun checkDefaultLauncher() {
+        try {
+            _uiState.value =
+                    _uiState.value.copy(isDefaultLauncher = context.isDefaultHomeApp())
+        } catch (_: Exception) {
+            _uiState.value = _uiState.value.copy(isDefaultLauncher = false)
+        }
+    }
+
+    fun recheckDefaultLauncher() = checkDefaultLauncher()
+
+    /** Double-tap on the empty region above home screen apps; locks via accessibility if enabled. */
+    fun onDoubleTapEmptyLock() {
+        viewModelScope.launch {
+            lockScreenFromDoubleTapIfEnabled()
+        }
+    }
+
+    fun onDoubleTapEmpty() {
+        viewModelScope.launch {
+            if (preferencesManager.doubleTapEmptyLockFlow.first()) {
+                lockScreenFromDoubleTapIfEnabled()
+                return@launch
+            }
+            preferencesManager.doubleTapEmptyTargetFlow.first()?.let(::launchWidgetTapTarget)
+        }
+    }
+
+    private suspend fun lockScreenFromDoubleTapIfEnabled() {
+        if (!preferencesManager.doubleTapEmptyLockFlow.first()) return
+        if (!LockScreenHelper.isLockAccessibilityServiceEnabled(context)) return
+        if (LockScreenHelper.lockScreenIfPossible()) return
+        Toast.makeText(context, R.string.double_tap_lock_failed, Toast.LENGTH_SHORT).show()
+        _requestLockAccessibilitySettings.emit(Unit)
+    }
+
+    fun openDefaultLauncherSettings() {
+        context.openDefaultLauncherSettings()
+    }
+
+    fun refreshBattery() = updateBattery()
+    fun refreshWeather() {
+        viewModelScope.launch(Dispatchers.IO) { fetchWeatherOnce() }
+    }
+
+    fun launchFavorite(fav: FavoriteApp) {
+        launchShortcutTarget(fav.resolvedIconTarget, fav.profileKey)
+    }
+
+    fun launchShortcut(shortcut: HomeShortcut) {
+        launchShortcutTarget(shortcut.target, shortcut.profileKey)
+    }
+
+    private fun launchWidgetTapTarget(binding: WidgetTapTarget): Boolean =
+            launchShortcutTarget(binding.target, binding.profileKey)
+
+    private fun launchShortcutTarget(target: ShortcutTarget, profileKey: String): Boolean {
+        return when (target) {
+            is ShortcutTarget.PhoneDial -> {
+                launchDefaultDialer()
+                true
+            }
+            is ShortcutTarget.WidgetPage -> false
+            is ShortcutTarget.UnlockPrivateSpace -> privateSpaceManager.requestUnlock()
+            is ShortcutTarget.DeepLink -> {
+                launchDeepLink(target.intentUri)
+                true
+            }
+            is ShortcutTarget.LauncherShortcut -> {
+                val user = resolveUserHandleForShortcut(profileKey, target.packageName)
+                appRepository.launchLauncherShortcut(
+                    target.packageName,
+                    target.shortcutId,
+                    user,
+                )
+            }
+            is ShortcutTarget.App -> launchAppTarget(target.packageName, profileKey)
+        }
+    }
+
+    private fun launchAppTarget(packageName: String, profileKey: String): Boolean {
+        if (profileKey != "0") {
+            val app = installedAppFor(packageName, profileKey)
+            val componentName = app?.componentName
+            val userHandle = app?.userHandle
+            if (componentName != null &&
+                            userHandle != null &&
+                            appRepository.launchMainActivity(componentName, userHandle)
+            ) {
+                return true
+            }
+        }
+        return appRepository.launchApp(packageName)
+    }
+
+    private fun launchDeepLink(intentUri: String) {
+        val intent =
+                try {
+                    Intent.parseUri(intentUri, Intent.URI_INTENT_SCHEME)
+                } catch (_: Exception) {
+                    Intent(Intent.ACTION_VIEW, intentUri.toUri())
+                }
+        try {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            // ignore malformed/unresolvable deep links
+        }
+    }
+
+    private fun launchDefaultDialer() {
+        try {
+            context.startActivity(
+                    Intent(Intent.ACTION_DIAL, "tel:".toUri()).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+            )
+        } catch (_: Exception) { }
+    }
+
+    private fun resolveUserHandleForShortcut(profileKey: String, packageName: String): UserHandle {
+        if (profileKey == "0") return Process.myUserHandle()
+        return installedAppFor(packageName, profileKey)?.userHandle ?: Process.myUserHandle()
+    }
+
+    fun formatShortcutTarget(target: ShortcutTarget, profileKey: String = "0"): String {
+        val apps = _allInstalledApps.value
+        val resolvedLabel =
+                if (target is ShortcutTarget.LauncherShortcut) {
+                    _allShortcutActions.value
+                        .firstOrNull { it.target == target && it.profileKey == profileKey }
+                        ?.actionLabel
+                } else {
+                    null
+                }
+        return formatShortcutTargetDisplay(
+                context = context,
+                target = target,
+                allApps = apps,
+                notSetLabel = context.getString(R.string.shortcut_target_not_set),
+                resolvedLauncherActionLabel = resolvedLabel,
+                profileKey = profileKey,
+        )
+    }
+
+    private fun inferIconNameForAction(action: AppShortcutAction): String {
+        val value = "${action.appLabel} ${action.actionLabel}".lowercase()
+        for ((needle, icon) in shortcutActionIconKeywordHints) {
+            if (value.contains(needle)) return icon
+        }
+        return "circle"
+    }
+
+    /**
+     * Opens the default clock / alarm app.
+     */
+    fun openClockApp() {
+        preferredClockTap.value?.let { tap ->
+            if (launchWidgetTapTarget(tap)) return
+        }
+        val showAlarms =
+                Intent(AlarmClock.ACTION_SHOW_ALARMS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+        try {
+            context.startActivity(showAlarms)
+            return
+        } catch (_: Exception) { }
+
+        val pm = context.packageManager
+        for (pkg in CLOCK_LAUNCH_PACKAGES) {
+            val launch = pm.getLaunchIntentForPackage(pkg) ?: continue
+            try {
+                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(launch)
+                return
+            } catch (_: Exception) { }
+        }
+    }
+
+    /**
+     * Opens the default calendar app.
+     */
+    fun openCalendarApp() {
+        preferredCalendarTap.value?.let { tap ->
+            if (launchWidgetTapTarget(tap)) return
+        }
+        try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                data = CalendarContract.CONTENT_URI.buildUpon()
+                    .appendPath("time")
+                    .appendPath(System.currentTimeMillis().toString())
+                    .build()
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            try {
+                val intent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_APP_CALENDAR)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            } catch (_: Exception) { }
+        }
+    }
+
+    private suspend fun fetchWeatherOnce() {
+        try {
+            if (!_uiState.value.showHomeWeather) {
+                applyWeatherUiState(hiddenWeatherState())
+                return
+            }
+            val useFahrenheit = TemperatureUnitHelper.useFahrenheit(context, _temperatureUnit.value)
+            val hasCoarsePermission = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!hasCoarsePermission) {
+                applyWeatherUiState(hiddenWeatherState())
+                return
+            }
+            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val liveLocation = WeatherLocationSource(locationManager).getLocation()
+            if (liveLocation != null) {
+                preferencesManager.setLastKnownWeatherLocation(
+                        liveLocation.latitude,
+                        liveLocation.longitude,
+                )
+            }
+            val coords =
+                    liveLocation?.let { it.latitude to it.longitude }
+                            ?: preferencesManager.getLastKnownWeatherLocation()
+            val updated =
+                    HomeWeatherUiState(
+                            weather =
+                                    coords?.let { (lat, lon) ->
+                                        weatherRepository.getWeather(
+                                                lat,
+                                                lon,
+                                                useFahrenheit = useFahrenheit,
+                                                includeAqi = showHomeAirQuality,
+                                                useUsAqi =
+                                                        AirQualityScaleHelper.useUsAqi(
+                                                                _airQualityScale.value
+                                                        ),
+                                        )
+                                    },
+                            weatherUseFahrenheit = useFahrenheit,
+                            showWeatherWidget = true
+                    )
+            applyWeatherUiState(updated)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) { }
+    }
+
+    private fun hiddenWeatherState(): HomeWeatherUiState =
+        HomeWeatherUiState(
+            weather = null,
+            weatherUseFahrenheit = TemperatureUnitHelper.useFahrenheit(context, _temperatureUnit.value),
+            showWeatherWidget = false
+        )
+
+    private fun applyWeatherUiState(updated: HomeWeatherUiState) {
+        if (_weatherUiState.value != updated) {
+            _weatherUiState.value = updated
+        }
+    }
+
+    private inline fun <T> observeFlow(
+            flow: Flow<T>,
+            crossinline onEach: (T) -> Unit,
+    ) {
+        viewModelScope.launch {
+            flow.collect { onEach(it) }
+        }
+    }
+
+    private suspend fun pruneStateAfterPackageRemoved(removedPkg: String, removedProfileKey: String) {
+        _allInstalledApps.value =
+                _allInstalledApps.value.filterNot {
+                    it.packageName == removedPkg &&
+                            appProfileKey(it.userHandle) == removedProfileKey
+                }
+        _appNameMap.value =
+                _appNameMap.value.toMutableMap().apply {
+                    remove(appMetadataKey(removedPkg, removedProfileKey))
+                    val hasPrimaryInstall =
+                            _allInstalledApps.value.any {
+                                it.packageName == removedPkg && it.userHandle == null
+                            }
+                    if (!hasPrimaryInstall && removedProfileKey == "0") {
+                        remove(appMetadataKey(removedPkg, "0"))
+                    }
+                }
+        _editFavorites.value =
+                _editFavorites.value.filterNot { it.matches(removedPkg, removedProfileKey) }
+        val currentFavorites = rawFavorites.value
+        val updatedFavorites =
+                currentFavorites.filterNot { it.matches(removedPkg, removedProfileKey) }
+        if (updatedFavorites.size != currentFavorites.size) {
+            Log.i(
+                    TAG,
+                    "package removed $removedPkg profile=$removedProfileKey; " +
+                            "pruned ${currentFavorites.size - updatedFavorites.size} favorites " +
+                            "(kept=${updatedFavorites.size})",
+            )
+            preferencesManager.setFavorites(updatedFavorites)
+        } else {
+            Log.i(TAG, "package removed $removedPkg profile=$removedProfileKey; no favorites matched")
+        }
+    }
+
+    private fun endAppMenuIfPhoneFavoriteSentinel(favorite: FavoriteApp): Boolean {
+        if (!favorite.isPhoneFavoriteSentinel()) return false
+        dismissAppMenu()
+        return true
+    }
+
+    private fun installedAppFor(packageName: String, profileKey: String): AppInfo? {
+        val user = appRepository.getUserHandleForProfile(profileKey)
+        return _allInstalledApps.value.firstOrNull {
+            it.packageName == packageName && it.userHandle == user
+        }
+    }
+
+    private fun shortcutArchivedKey(shortcut: HomeShortcut): String? =
+            when (val target = shortcut.target) {
+                is ShortcutTarget.App -> drawerOpenCountKey(target.packageName, shortcut.profileKey)
+                is ShortcutTarget.LauncherShortcut ->
+                        drawerOpenCountKey(target.packageName, shortcut.profileKey)
+                is ShortcutTarget.DeepLink,
+                is ShortcutTarget.PhoneDial,
+                is ShortcutTarget.WidgetPage,
+                is ShortcutTarget.UnlockPrivateSpace -> null
+            }
+
+    private fun FavoriteApp.matches(packageName: String, profileKey: String): Boolean =
+            this.packageName == packageName && this.profileKey == profileKey
+
+    private fun startPackageScopedIntent(favorite: FavoriteApp, action: String) {
+        if (endAppMenuIfPhoneFavoriteSentinel(favorite)) return
+        val userHandle =
+                installedAppFor(favorite.packageName, favorite.profileKey)?.userHandle
+        appRepository.startPackageManagementIntent(
+                favorite.packageName,
+                userHandle,
+                action,
+        )
+        dismissAppMenu()
+    }
+
+    private fun <T> MutableList<T>.toggleItem(predicate: (T) -> Boolean, factory: () -> T) {
+        val idx = indexOfFirst(predicate)
+        if (idx >= 0) removeAt(idx) else add(factory())
+    }
+
+    private fun FavoriteApp.isPhoneFavoriteSentinel(): Boolean =
+            packageName == ShortcutTarget.PHONE_FAVORITE_SENTINEL_PACKAGE
+
+    fun launchAppShortcutAction(action: AppShortcutAction) {
+        val target = action.target as? ShortcutTarget.LauncherShortcut ?: return
+        val user = appRepository.getUserHandleForProfile(action.profileKey)
+        appRepository.launchLauncherShortcut(target.packageName, target.shortcutId, user)
+    }
+
+    private fun isHomeCategoryPickerReserved(category: String): Boolean =
+        category.equals(ReservedCategoryNames.ALL_APPS, ignoreCase = true) ||
+            category.equals(ReservedCategoryNames.PRIVATE, ignoreCase = true) ||
+            category.equals(ReservedCategoryNames.WORK, ignoreCase = true) ||
+            category.equals(ReservedCategoryNames.UNCATEGORIZED, ignoreCase = true)
+
+    private companion object {
+        private const val TAG = "FokusHomeApps"
+
+        /** Max launcher shortcuts shown in the home long-press app menu. */
+        private const val MAX_APP_MENU_SHORTCUTS = 5
+
+        private val shortcutActionIconKeywordHints =
+            listOf(
+                "music" to "music",
+                "work" to "work",
+                "mail" to "work",
+                "chat" to "chat",
+                "message" to "chat",
+                "call" to "call",
+                "dial" to "call",
+                "dialer" to "call",
+                "phone" to "call",
+                "camera" to "camera",
+                "photo" to "gallery",
+                "gallery" to "gallery",
+                "video" to "video",
+                "map" to "map",
+                "direction" to "map",
+            )
+
+        /**
+         * [Intent.EXTRA_TIMEZONE] documents this key but the constant is not inlined below API 30;
+         * [Intent.ACTION_TIMEZONE_CHANGED] has used `"time-zone"` since early Android.
+         */
+        private const val TIMEZONE_CHANGED_EXTRA_ID = "time-zone"
+
+        /** OEM / AOSP clock packages as fallback when [AlarmClock.ACTION_SHOW_ALARMS] is unavailable. */
+        val CLOCK_LAUNCH_PACKAGES =
+                listOf(
+                        "com.sec.android.app.clockpackage",
+                        "com.google.android.deskclock",
+                        "com.android.deskclock",
+                )
+    }
+}

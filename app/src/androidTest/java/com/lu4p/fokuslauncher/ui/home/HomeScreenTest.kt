@@ -1,0 +1,773 @@
+package com.lu4p.fokuslauncher.ui.home
+
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.doubleClick
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import com.lu4p.fokuslauncher.data.model.FavoriteApp
+import com.lu4p.fokuslauncher.data.model.AppInfo
+import com.lu4p.fokuslauncher.data.model.HomeAlignment
+import com.lu4p.fokuslauncher.data.model.HomeShortcut
+import com.lu4p.fokuslauncher.data.model.WeatherData
+import com.lu4p.fokuslauncher.ui.theme.FokusLauncherTheme
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+
+class HomeScreenTest {
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private val testFavorites =
+            listOf(
+                    FavoriteApp(label = "Music", packageName = "com.lu4p.music", iconName = "music"),
+                    FavoriteApp(label = "Work", packageName = "com.lu4p.work", iconName = "work"),
+                    FavoriteApp(label = "Read", packageName = "com.lu4p.reader", iconName = "read"),
+                    FavoriteApp(label = "Social", packageName = "com.lu4p.social", iconName = "chat"),
+                    FavoriteApp(label = "Health", packageName = "com.lu4p.health", iconName = "fitness"),
+                    FavoriteApp(label = "Finance", packageName = "com.lu4p.finance", iconName = "finance")
+            )
+    private val testRightSideShortcuts =
+            testFavorites.map { HomeShortcut(iconName = it.iconName, target = it.resolvedIconTarget) }
+
+    private fun clock(
+            time: String = "3:56",
+            date: String = "Fri. 12 Jul.",
+            battery: Int = 88
+    ) = HomeClockUiState(currentTime = time, currentDate = date, batteryPercent = battery)
+
+    private val weatherOff = HomeWeatherUiState()
+
+    @Test
+    fun homeIconsAreIndependentOfDrawerAndTextRemainsDefault() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                    uiState = HomeUiState(), clockUiState = clock(), weatherUiState = weatherOff,
+                    favorites = testFavorites.take(1), installedApps = listOf(AppInfo("com.lu4p.music", "Music", null)),
+                    rightSideShortcuts = emptyList(), onLabelClick = {}, onIconClick = {},
+                )
+            }
+        }
+        composeTestRule.onNodeWithText("Music").assertIsDisplayed()
+        composeTestRule.onAllNodesWithTag("home_app_icon_Music").assertCountEquals(0)
+    }
+
+    @Test
+    fun homeIconsCanReplaceLabelsWithoutLosingClickTarget() {
+        var clicks = 0
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                    uiState = HomeUiState(homeAppIconMode = HomeAppIconMode.ICON_ONLY),
+                    clockUiState = clock(), weatherUiState = weatherOff,
+                    favorites = testFavorites.take(1), installedApps = listOf(AppInfo("com.lu4p.music", "Music", null)),
+                    rightSideShortcuts = emptyList(), onLabelClick = { clicks++ }, onIconClick = {},
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag("home_app_icon_Music", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Music").assertCountEquals(0)
+        composeTestRule.onNodeWithTag("favorite_Music").performClick()
+        assertEquals(1, clicks)
+    }
+
+    @Test
+    fun homeIconsCanAppearBesideLabelsWithoutChangingDrawerSetting() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                    uiState = HomeUiState(homeAppIconMode = HomeAppIconMode.WITH_LABEL),
+                    clockUiState = clock(), weatherUiState = weatherOff,
+                    favorites = testFavorites.take(1), installedApps = listOf(AppInfo("com.lu4p.music", "Music", null)),
+                    rightSideShortcuts = emptyList(), onLabelClick = {}, onIconClick = {},
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag("home_app_icon_Music", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Music").assertIsDisplayed()
+    }
+
+    @Test
+    fun iconOnlyKeepsLabelWhenAppCannotBeResolved() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                    uiState = HomeUiState(homeAppIconMode = HomeAppIconMode.ICON_ONLY),
+                    clockUiState = clock(), weatherUiState = weatherOff,
+                    favorites = testFavorites.take(1), installedApps = emptyList(),
+                    rightSideShortcuts = emptyList(), onLabelClick = {}, onIconClick = {},
+                )
+            }
+        }
+        composeTestRule.onNodeWithText("Music").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_displaysClockWidget() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("clock_widget").assertIsDisplayed()
+        composeTestRule.onNodeWithText("3:56").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_displaysDateAndBattery() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("date_battery_row").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Fri. 12 Jul.").assertIsDisplayed()
+        composeTestRule.onNodeWithText("88%").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_displaysFavoriteApps() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Music").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Work").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Read").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Social").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Health").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Finance").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_emptyFavorites_showsNoItems() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState =
+                                clock(time = "12:00", date = "Mon. 1 Jan.", battery = 100),
+                        weatherUiState = weatherOff,
+                        favorites = emptyList(),
+                        rightSideShortcuts = emptyList(),
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("favorites_list").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("clock_widget").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_zeroBattery_displaysCorrectly() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState =
+                                clock(time = "0:00", date = "Sun. 31 Dec.", battery = 0),
+                        weatherUiState = weatherOff,
+                        favorites = emptyList(),
+                        rightSideShortcuts = emptyList(),
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("0%").assertIsDisplayed()
+        composeTestRule.onNodeWithText("0:00").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_showsDefaultLauncherBanner_whenNotDefault() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(isDefaultLauncher = false),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("set_default_launcher_button").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Set as default launcher").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_hidesDefaultLauncherBanner_whenIsDefault() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(isDefaultLauncher = true),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {}
+                )
+            }
+        }
+
+        composeTestRule.onAllNodesWithTag("set_default_launcher_button").assertCountEquals(0)
+    }
+
+    @Test
+    fun homeScreen_weatherWidget_showsCelsiusAndHandlesClick() {
+        var weatherClicked = false
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(showHomeWeather = true),
+                        clockUiState = clock(),
+                        weatherUiState =
+                                HomeWeatherUiState(
+                                        weather = WeatherData(temperature = 22, iconCode = "01d"),
+                                        showWeatherWidget = true
+                                ),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                        onWeatherClick = { weatherClicked = true }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("weather_widget").assertIsDisplayed().performClick()
+        composeTestRule.onNodeWithText("22°C").assertIsDisplayed()
+        assertTrue(weatherClicked)
+    }
+
+    @Test
+    fun homeScreen_weatherWidget_showsFahrenheitWhenRequested() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(showHomeWeather = true),
+                        clockUiState = clock(),
+                        weatherUiState =
+                                HomeWeatherUiState(
+                                        weather = WeatherData(temperature = 72, iconCode = "01d"),
+                                        weatherUseFahrenheit = true,
+                                        showWeatherWidget = true
+                                ),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                        onWeatherClick = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("weather_widget").assertIsDisplayed()
+        composeTestRule.onNodeWithText("72°F").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_weatherWidget_showsAqiNextToTemperature() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(showHomeWeather = true),
+                        clockUiState = clock(),
+                        weatherUiState =
+                                HomeWeatherUiState(
+                                        weather =
+                                                WeatherData(
+                                                        temperature = 22,
+                                                        iconCode = "01d",
+                                                        aqi = 29,
+                                                ),
+                                        showWeatherWidget = true,
+                                ),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("weather_widget").assertIsDisplayed()
+        composeTestRule.onNodeWithText("22°C · 29").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_centerAlignment_keepsPrimaryInfoAtEstablishedEdges() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState =
+                                HomeUiState(
+                                        homeAlignment = HomeAlignment.CENTER,
+                                        showHomeWeather = true,
+                                ),
+                        clockUiState = clock(),
+                        weatherUiState =
+                                HomeWeatherUiState(
+                                        weather = WeatherData(temperature = 22, iconCode = "01d"),
+                                        showWeatherWidget = true,
+                                ),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                )
+            }
+        }
+
+        val screenCenter =
+                composeTestRule.onNodeWithTag("home_screen")
+                        .fetchSemanticsNode()
+                        .boundsInRoot
+                        .center
+                        .x
+        val clockCenter =
+                composeTestRule.onNodeWithTag("clock_widget")
+                        .fetchSemanticsNode()
+                        .boundsInRoot
+                        .center
+                        .x
+        val weatherCenter =
+                composeTestRule.onNodeWithTag("weather_widget")
+                        .fetchSemanticsNode()
+                        .boundsInRoot
+                        .center
+                        .x
+        val dateCenter =
+                composeTestRule.onNodeWithText("Fri. 12 Jul.")
+                        .fetchSemanticsNode()
+                        .boundsInRoot
+                        .center
+                        .x
+
+        assertTrue(clockCenter < screenCenter)
+        assertTrue(dateCenter < screenCenter)
+        assertTrue(weatherCenter > screenCenter)
+    }
+
+    @Test
+    fun homeScreen_screenTimeWidget_showsLast24HoursTotal() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(showHomeWeather = true),
+                        clockUiState = clock(),
+                        weatherUiState =
+                                HomeWeatherUiState(
+                                        weather = WeatherData(temperature = 22, iconCode = "01d"),
+                                        showWeatherWidget = true,
+                                ),
+                        screenTimeUiState =
+                                HomeScreenTimeUiState(
+                                        enabled = true,
+                                        durationText = "4h 32m",
+                                ),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("screen_time_widget").assertIsDisplayed()
+        composeTestRule.onNodeWithText("4h 32m").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_screenTimeWidget_hiddenWhenDisabled() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        screenTimeUiState = HomeScreenTimeUiState(),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                )
+            }
+        }
+
+        composeTestRule.onAllNodesWithTag("screen_time_widget").assertCountEquals(0)
+    }
+
+    @Test
+    fun homeScreen_noteWidget_showsTextAndOpensEditorOnTap() {
+        var noteClicks = 0
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        noteUiState = HomeNoteUiState(showWidget = true, text = "milk\neggs"),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                        onNoteClick = { noteClicks++ },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("milk\neggs").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("note_widget").assertIsDisplayed().performClick()
+        assertEquals(1, noteClicks)
+    }
+
+    @Test
+    fun homeScreen_noteWidget_rendersMarkdown() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        noteUiState =
+                                HomeNoteUiState(
+                                        showWidget = true,
+                                        text = "# Today\n- [ ] **milk**\n- [x] eggs\n- bread",
+                                ),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                )
+            }
+        }
+
+        composeTestRule
+                .onNodeWithText("Today\n☐ milk\n☑ eggs\n• bread")
+                .assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_noteWidget_tapTaskTogglesAndOtherTapsEdit() {
+        val toggled = mutableListOf<Int>()
+        var noteClicks = 0
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        noteUiState = HomeNoteUiState(showWidget = true, text = "milk\n- [ ] eggs"),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                        onNoteClick = { noteClicks++ },
+                        onToggleNoteTask = { toggled += it },
+                )
+            }
+        }
+
+        val note = composeTestRule.onNodeWithTag("note_widget")
+        note.performTouchInput { click(Offset(5f, height - 5f)) }
+        composeTestRule.runOnIdle {
+            assertEquals(listOf(1), toggled)
+            assertEquals(0, noteClicks)
+        }
+
+        note.performTouchInput { click(Offset(5f, 5f)) }
+        composeTestRule.runOnIdle {
+            assertEquals(listOf(1), toggled)
+            assertEquals(1, noteClicks)
+        }
+
+        note.performTouchInput { longClick(Offset(5f, height - 5f)) }
+        composeTestRule.runOnIdle {
+            assertEquals(listOf(1), toggled)
+            assertEquals(2, noteClicks)
+        }
+    }
+
+    @Test
+    fun homeScreen_noteWidget_showsPlaceholderWhenEmpty() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        noteUiState = HomeNoteUiState(showWidget = true, text = ""),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Tap to add a note").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_noteWidget_hiddenWhenDisabled() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        noteUiState = HomeNoteUiState(showWidget = false, text = "milk"),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                )
+            }
+        }
+
+        composeTestRule.onAllNodesWithTag("note_widget").assertCountEquals(0)
+    }
+
+    @Test
+    fun homeScreen_hidesAllHomeInfo_whenAllItemTogglesOff() {
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState =
+                                HomeUiState(
+                                        showHomeClock = false,
+                                        showHomeDate = false,
+                                        showHomeWeather = false,
+                                        showHomeBattery = false
+                                ),
+                        clockUiState = clock(),
+                        weatherUiState =
+                                HomeWeatherUiState(
+                                        weather = WeatherData(temperature = 22, iconCode = "01d"),
+                                        showWeatherWidget = true
+                                ),
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {}
+                )
+            }
+        }
+
+        composeTestRule.onAllNodesWithTag("clock_widget").assertCountEquals(0)
+        composeTestRule.onAllNodesWithTag("date_battery_row").assertCountEquals(0)
+        composeTestRule.onAllNodesWithTag("weather_widget").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Fri. 12 Jul.").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("88%").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("22°C").assertCountEquals(0)
+    }
+
+    @Test
+    fun homeScreen_rightShortcuts_followEditListOrder() {
+        val shortcuts = testRightSideShortcuts.take(2)
+        val clicked = mutableListOf<String>()
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        favorites = testFavorites,
+                        rightSideShortcuts = shortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = { clicked.add(it.iconName) }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("right_shortcut_icon_0").performClick()
+        composeTestRule.onNodeWithTag("right_shortcut_icon_1").performClick()
+        assertEquals(listOf(shortcuts[0].iconName, shortcuts[1].iconName), clicked)
+
+        val firstTop =
+                composeTestRule.onNodeWithTag("right_shortcut_icon_0")
+                        .fetchSemanticsNode()
+                        .boundsInRoot.top
+        val secondTop =
+                composeTestRule.onNodeWithTag("right_shortcut_icon_1")
+                        .fetchSemanticsNode()
+                        .boundsInRoot.top
+        assertTrue(firstTop < secondTop)
+    }
+
+    @Test
+    fun homeScreen_rightShortcuts_alignToBottomOfFavorites() {
+        val shortcuts = testRightSideShortcuts.take(2)
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        favorites = testFavorites,
+                        rightSideShortcuts = shortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {}
+                )
+            }
+        }
+
+        val bottomFavorite =
+                composeTestRule.onNodeWithText("Finance").fetchSemanticsNode().boundsInRoot.bottom
+        val bottomShortcut =
+                composeTestRule.onNodeWithTag("right_shortcut_icon_1")
+                        .fetchSemanticsNode()
+                        .boundsInRoot.bottom
+
+        assertTrue(bottomShortcut >= bottomFavorite - 1f)
+    }
+
+    @Test
+    fun homeScreen_doubleTapActionEnabled_triggersCallback() {
+        var doubleTapTriggered = false
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(doubleTapEmptyActionEnabled = true),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                        doubleTapEmptyEnabled = true,
+                        onDoubleTapEmpty = { doubleTapTriggered = true }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("home_screen").performTouchInput {
+            doubleClick()
+        }
+        assertTrue(doubleTapTriggered)
+    }
+
+    @Test
+    fun homeScreen_doubleTapActionDisabled_doesNotTriggerCallback() {
+        var doubleTapTriggered = false
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(doubleTapEmptyActionEnabled = false),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                        doubleTapEmptyEnabled = false,
+                        onDoubleTapEmpty = { doubleTapTriggered = true }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("home_screen").performTouchInput {
+            doubleClick()
+        }
+        assertFalse(doubleTapTriggered)
+    }
+
+    @Test
+    fun homeScreen_doubleTapOnFavorite_doesNotTriggerAction() {
+        var doubleTapTriggered = false
+        composeTestRule.setContent {
+            FokusLauncherTheme {
+                HomeScreenContent(
+                        uiState = HomeUiState(doubleTapEmptyActionEnabled = true),
+                        clockUiState = clock(),
+                        weatherUiState = weatherOff,
+                        favorites = testFavorites,
+                        rightSideShortcuts = testRightSideShortcuts,
+                        onLabelClick = {},
+                        onLabelLongPress = {},
+                        onIconClick = {},
+                        doubleTapEmptyEnabled = true,
+                        onDoubleTapEmpty = { doubleTapTriggered = true }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Music").performTouchInput {
+            doubleClick()
+        }
+
+        assertFalse("Double tap should not be triggered on favorite", doubleTapTriggered)
+    }
+}

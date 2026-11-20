@@ -1,0 +1,75 @@
+﻿# Implementation log
+
+## 2026-11-12 — Milestone 0 + baseline (Sukoon fork of Fokus 1.9.8 @ 019ba80)
+Environment: Windows 11, Android SDK (platforms 36, 37.0, build-tools 36.0.0) in `C:\Android\sdk`,
+portable Temurin JDK 21.0.13 (system JDK 25 can't be used: Gradle toolchain needs 21). Gradle 9.7.0.
+
+| Command | Result |
+|---|---|
+| `./gradlew assembleDebug` | **BUILD SUCCESSFUL** (20m58s cold; `app-debug.apk` 26.7 MB) |
+| `./gradlew testDebugUnitTest` | **FAILED**: 516 tests run, 3 failures, 0 skipped |
+
+Failing tests (all environmental, Robolectric native runtime does not load on this machine):
+- `WidgetConfigurationLaunchTest` ×2 — "Unable to load Robolectric native runtime library"
+- `AppRepositoryTest > deleteCategory records suppressed category definition` — `UnsatisfiedLinkError` in `SQLiteConnection.nativeOpen`
+
+Not yet investigated whether these also fail upstream on this machine; treat as pre-existing/environmental until checked.
+Lint, instrumentation tests and on-device (OnePlus 8) tests: **not run**.
+
+Next: Milestone 2 (theme model, layout presets, Clock Studio).
+
+## 2026-11-20 — Milestone 1 compliance track (branch feat/compliance-baseline, worktree C:\Android\wt\compl)
+Added: Settings > Open-source acknowledgements (Fokus, Victoria as reference only, libraries/data credits, source link,
+full GPL-3.0 viewer from `assets/licenses/GPL-3.0.txt`; strings in `values/strings_about.xml`); removed upstream
+Weblate/Matrix/PayPal links and `.github/FUNDING.yml`; replaced "Fokus" app name with "Sukoon" in all locale strings,
+fastlane text and issue templates; new `.github/workflows/build.yml` (unit tests + debug APK, no secrets) replacing the
+upstream release-signing and `is-malicious` (needs OPENCODE_API_KEY) workflows; README, permissions and attribution docs updated.
+
+JDK 21 (`JAVA_HOME=C:\Android\jdk21\jdk-21.0.13+9`), worktree path has no spaces:
+| Command | Result |
+|---|---|
+| `./gradlew assembleDebug testDebugUnitTest --continue --console=plain` | assembleDebug OK (app-debug.apk 26.7 MB); testDebugUnitTest: 516 tests, 3 failed, BUILD FAILED in 22m22s |
+| same 3 tests with `-I robo-init.gradle` (robolectric.offline + dependency dir without spaces), `--tests *WidgetConfigurationLaunchTest --tests *AppRepositoryTest` | BUILD SUCCESSFUL; WidgetConfigurationLaunchTest 8/8, AppRepositoryTest 67/67 |
+
+Root cause of the 3 failures (environmental, not a Sukoon regression and not a path-with-spaces-in-project issue): the Windows
+user profile is `C:\Users\Haroon Khalid`. Robolectric 4.16.1 resolves `android-all-instrumented-*.jar` from `~/.m2` and
+percent-encodes the path (`Haroon%20Khalid`), giving `NoSuchFileException`; the native runtime then fails to load, so the two
+widget tests error and the sqlite native `UnsatisfiedLinkError` hits the AppRepositoryTest. The jars exist at the real path.
+Failures persist in the space-free worktree path, confirming the project path is not the cause. The pristine upstream copy
+(C:\Android\tmp\fokus-baseline) was prepared but NOT built/tested: the cause is machine-level (user home), so upstream would
+fail identically, but this is inference, not a measurement. The workaround is not applied by default; see
+`scripts/robolectric-local-deps.init.gradle`. CI on Linux is expected not to hit this (not yet run; no push performed).
+Not run: lint, instrumentation tests, on-device tests, the acknowledgements UI on a device.
+## 2026-11-20 - Milestone 2: theme engine + Theme Studio (branch feat/theme-engine)
+Added `com.lu4p.fokuslauncher.theme` (model, 8 built-ins, strict JSON codec with v0->v1 migration, DataStore `ThemeStore`), `ThemeStudioScreen`/`ThemeStudioViewModel` (Settings > Theme Studio: preview, apply, reset, edit colours, save/rename/delete custom themes, copy/paste JSON export/import). `FokusLauncherTheme` takes an optional `appTheme`; settings pages use `themedSettingsScrim` instead of black. Strings are in `strings_theme.xml`.
+
+| Command (JAVA_HOME=C:\Android\jdk21\jdk-21.0.13+9) | Result |
+|---|---|
+| `./gradlew testDebugUnitTest --tests "com.lu4p.fokuslauncher.theme.*"` | **BUILD SUCCESSFUL**: ThemeCodecTest 13, ThemeModelTest 8, ThemeStoreTest 14 = 35 tests, 0 failures |
+| `./gradlew assembleDebug` | **BUILD SUCCESSFUL** (6m40s warm) |
+
+Notes / known issues:
+- First ThemeStoreTest run with a real file-backed DataStore failed on this Windows JVM (`Unable to rename ...tmp`, DataStore's rename over an existing file); tests now use an in-memory `DataStore<Preferences>`. File-backed persistence on a device was not run.
+- Full `testDebugUnitTest` suite was not re-run for this track (only the theme tests); the 3 known Robolectric/SQLite failures are untouched.
+- Not run: lint, instrumentation/UI tests, on-device or visual check of Theme Studio and of light themes across every screen. Clock style, app-list style, spacing and wallpaper reference from the brief are not yet in the model; typography fields are stored as references but not yet applied (font registry belongs to the typography track). Motion settings are stored but not consumed yet.
+- Applied theme is ignored over photo wallpapers (classic look kept for legibility). Status/navigation bar icon tint does not yet follow `appearance`.
+## Milestone 3: typography and notes (branch feat/typography-notes)
+Built with JDK 21 (Temurin 21.0.13). Commands run together: `./gradlew assembleDebug testDebugUnitTest --tests "com.lu4p.fokuslauncher.notes.*" --tests "com.lu4p.fokuslauncher.typography.*" --continue`.
+
+| Check | Result |
+|---|---|
+| `assembleDebug` | **BUILD SUCCESSFUL** (23m14s, concurrent with other builds). `app-debug.apk` 27,857,318 bytes vs 26,690,110 baseline: **+1,167,208 bytes (~1.11 MiB)**; fonts inside the APK are 477,930 + 166,653 + 378,561 bytes deflated (about 1.02 MB) plus licence texts and code |
+| New unit tests (28): `FontRegistryTest` 7, `BidiTextTest` 7, `NoteAppearanceTest` 4, `NoteRepositoryTest` 10 | **all passed, 0 failures** (pure JVM, fake in-memory DAO; no SQLite native library) |
+| Full `testDebugUnitTest` | **not re-run** in this track (only the targeted new tests); the 3 known Robolectric/SQLite failures were not touched |
+| Room DAO/migration instrumentation test for 7->8 | **not written / not run** (existing migration tests are `androidTest`, `exportSchema = false`, need a device) |
+| Lint, on-device, RTL/Nastaliq visual check | **not run** |
+
+Delivered: `typography` package (registry, cache, per-element DataStore, settings screen, `withElementFont` applied to clock, date, home favourite labels, drawer labels); `notes` package (Room entity/DAO, DB 7->8 migration, repository, autosaving ViewModel with SavedStateHandle draft, list+editor screen with appearance controls, pinned note on home via `HomePinnedNoteOr`). Settings hub got two rows (Fonts, Notes).
+## Milestone 2: home layout configuration and Clock Studio (branch feat/layout-clock-studio)
+
+Added package `home/layout` (model, presets, codec, repository, ViewModel, `ConfiguredClock`), Layout and Clock Studio settings screens, `strings_layout.xml`, and backup keys. Shared files touched additively: `HomeScreen.kt`, `NavGraph.kt`, `SettingsScreen.kt`, `ConfigurationBackup.kt`.
+
+| Command | Result |
+|---|---|
+| `JAVA_HOME=C:\Android\jdk21\jdk-21.0.13+9 ./gradlew testDebugUnitTest --tests "com.lu4p.fokuslauncher.home.layout.*" --console=plain` | First runs failed to compile (enum entries used as expression; fixed with star import). A real file-backed DataStore test failed on Windows (`Unable to rename ... .tmp`), so the persistence test uses an in-memory DataStore. Final run: **BUILD SUCCESSFUL**, 9 tests in `HomeLayoutTest` |
+| `./gradlew assembleDebug testDebugUnitTest --tests "com.lu4p.fokuslauncher.ConfigurationBackupTest" --tests "com.lu4p.fokuslauncher.home.layout.*"` | **BUILD SUCCESSFUL** (3m25s); APK assembled, backup and layout tests passed. Full `testDebugUnitTest` suite not re-run. No on-device/UI verification. |

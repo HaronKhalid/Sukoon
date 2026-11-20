@@ -1,0 +1,1452 @@
+package com.lu4p.fokuslauncher.data.repository
+
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.content.pm.ApplicationInfo
+import android.content.pm.LauncherApps
+import android.content.pm.PackageManager
+import android.content.pm.ShortcutInfo
+import android.os.Process
+import android.os.UserHandle
+import android.os.UserManager
+import com.lu4p.fokuslauncher.R
+import com.lu4p.fokuslauncher.data.database.dao.AppDao
+import com.lu4p.fokuslauncher.data.local.AppListSnapshotStore
+import com.lu4p.fokuslauncher.data.database.entity.AppCategoryDefinitionEntity
+import com.lu4p.fokuslauncher.data.database.entity.AppCategoryEntity
+import com.lu4p.fokuslauncher.data.database.entity.HiddenAppEntity
+import com.lu4p.fokuslauncher.data.database.entity.RenamedAppEntity
+import com.lu4p.fokuslauncher.data.database.entity.SuppressedCategoryDefinitionEntity
+import com.lu4p.fokuslauncher.data.model.AddCategoryResult
+import com.lu4p.fokuslauncher.data.model.AppInfo
+import com.lu4p.fokuslauncher.data.model.HOST_APP_METADATA_SENTINEL
+import com.lu4p.fokuslauncher.data.model.LEGACY_PACKAGE_WIDE_METADATA
+import com.lu4p.fokuslauncher.data.model.AppShortcutAction
+import com.lu4p.fokuslauncher.data.model.SystemCategoryKeys
+import com.lu4p.fokuslauncher.utils.PrivateSpaceManager
+import com.lu4p.fokuslauncher.utils.containsNormalizedSearch
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import androidx.room.Room
+import com.lu4p.fokuslauncher.data.database.AppDatabase
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+
+@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+class AppRepositoryTest {
+
+    private lateinit var context: Context
+    private lateinit var packageManager: PackageManager
+    private lateinit var appDao: AppDao
+    private lateinit var privateSpaceManager: PrivateSpaceManager
+    private lateinit var launcherApps: LauncherApps
+    private lateinit var userManager: UserManager
+    private lateinit var repository: AppRepository
+
+    private val myUser: UserHandle = Process.myUserHandle()
+
+    @Before
+    fun setup() {
+        context = mockk(relaxed = true)
+        packageManager = mockk(relaxed = true)
+        appDao = mockk(relaxed = true)
+        privateSpaceManager = mockk(relaxed = true)
+        launcherApps = mockk(relaxed = true)
+        userManager = mockk(relaxed = true)
+
+        every { context.packageManager } returns packageManager
+        every { context.packageName } returns "com.lu4p.fokuslauncher"
+        every { packageManager.getUserBadgedLabel(any(), any()) } answers { firstArg<CharSequence>() }
+        every { privateSpaceManager.isPrivateSpaceProfile(any()) } returns false
+        every { context.getSystemService(Context.LAUNCHER_APPS_SERVICE) } returns launcherApps
+        every { context.getSystemService(LauncherApps::class.java) } returns launcherApps
+        every { context.getSystemService(Context.USER_SERVICE) } returns userManager
+        every { userManager.userProfiles } returns listOf(myUser)
+        every { launcherApps.getActivityList(null, myUser) } returns emptyList()
+        every { launcherApps.getShortcuts(any(), any()) } returns emptyList()
+
+        every { context.getString(R.string.inferred_category_utilities) } returns "Utilities"
+        every { context.getString(R.string.inferred_category_games) } returns "Games"
+        every { context.getString(R.string.inferred_category_productivity) } returns "Productivity"
+        every { context.getString(R.string.inferred_category_social) } returns "Social"
+        every { context.getString(R.string.inferred_category_media) } returns "Media"
+        every { context.getString(R.string.shortcut_generic_label) } returns "Shortcut"
+
+        repository = AppRepository(context, appDao, privateSpaceManager, mockk(relaxed = true))
+    }
+
+    @Test
+    fun `added actions appear only in drawer and unavailable actions remain removable`() {
+        val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("drawer_shortcuts", Context.MODE_PRIVATE)
+        preferences.edit().clear().commit()
+        every { context.getSharedPreferences("drawer_shortcuts", Context.MODE_PRIVATE) } returns preferences
+        every { launcherApps.getActivityList(null, myUser) } returns
+                listOf(createMockLauncherActivity("chat", "Chat"))
+        val hosts = repository.getInstalledApps()
+        val published = createMockShortcut("alice", "Alice")
+        every { launcherApps.getShortcuts(any(), myUser) } returns listOf(published)
+        val action = AppShortcutAction("Chat", "Alice",
+                com.lu4p.fokuslauncher.data.model.ShortcutTarget.LauncherShortcut("chat", "alice"))
+        assertTrue(repository.addDrawerShortcut(action))
+        val row = repository.getDrawerShortcutApps(hosts).single()
+        assertEquals("Chat - Alice", row.label)
+        assertEquals("alice", row.launcherShortcutId)
+        assertTrue(row.isDrawerShortcut)
+        assertTrue(hosts.none { it.isDrawerShortcut })
+        every { published.isEnabled } returns false
+        assertTrue(repository.getDrawerShortcutApps(hosts).isEmpty())
+        assertEquals(listOf(action), repository.getDrawerShortcuts().value)
+        repository.removeDrawerShortcut(action)
+        assertTrue(repository.getDrawerShortcuts().value.isEmpty())
+        verify(exactly = 0) { launcherApps.pinShortcuts(any(), any(), any()) }
+    }
+
+    @Test
+    fun `drawer shortcut resolution preserves profiles and hides locked Private Space`() {
+        val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("drawer_shortcuts", Context.MODE_PRIVATE)
+        preferences.edit().clear().commit()
+        every { context.getSharedPreferences("drawer_shortcuts", Context.MODE_PRIVATE) } returns preferences
+        val privateUser = secondaryUserHandle()
+        every { userManager.userProfiles } returns listOf(myUser, privateUser)
+        every { privateSpaceManager.isPrivateSpaceProfile(privateUser) } returns true
+        every { privateSpaceManager.isPrivateSpaceUnlocked() } returns true
+        every { launcherApps.getShortcuts(any(), any()) } returns listOf(createMockShortcut("alice", "Alice"))
+        val personal = AppShortcutAction("Chat", "Alice",
+                com.lu4p.fokuslauncher.data.model.ShortcutTarget.LauncherShortcut("chat", "alice"))
+        val privateAction = personal.copy(profileKey = "10")
+        assertTrue(repository.addDrawerShortcut(personal))
+        assertTrue(repository.addDrawerShortcut(privateAction))
+        val hosts = listOf(AppInfo("chat", "Chat", null), AppInfo("chat", "Chat", null, userHandle = privateUser))
+        assertEquals(listOf(null, privateUser), repository.getDrawerShortcutApps(hosts).map { it.userHandle })
+        every { privateSpaceManager.isPrivateSpaceUnlocked() } returns false
+        assertEquals(listOf(null), repository.getDrawerShortcutApps(hosts).map { it.userHandle })
+        assertFalse(repository.addDrawerShortcut(privateAction))
+        repository.removeDrawerShortcut(personal)
+        assertEquals(listOf(privateAction), repository.getDrawerShortcuts().value)
+    }
+
+    // --- App Loading Tests ---
+
+    @Test
+    fun `getInstalledApps returns sorted list excluding launcher itself`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns
+                listOf(
+                        createMockLauncherActivity("com.lu4p.chrome", "Chrome"),
+                        createMockLauncherActivity("com.lu4p.fokuslauncher", "Fokus Launcher"),
+                        createMockLauncherActivity("com.lu4p.calculator", "Calculator"),
+                        createMockLauncherActivity("com.lu4p.atom", "Atom")
+                )
+
+        val result = repository.getInstalledApps()
+
+        assertEquals(3, result.size)
+        assertEquals("Atom", result[0].label)
+        assertEquals("Calculator", result[1].label)
+        assertEquals("Chrome", result[2].label)
+        assertTrue(result.none { it.packageName == "com.lu4p.fokuslauncher" })
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun `getInstalledApps excludes archived apps and getArchivedApps returns them`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns
+                listOf(
+                        createMockLauncherActivity("com.lu4p.notes", "Notes"),
+                        createMockLauncherActivity(
+                                packageName = "com.lu4p.reader",
+                                label = "Reader",
+                                archived = true,
+                        ),
+                )
+
+        val installed = repository.getInstalledApps()
+        val archived = repository.getArchivedApps()
+
+        assertEquals(listOf("com.lu4p.notes"), installed.map { it.packageName })
+        assertEquals(listOf("com.lu4p.reader"), archived.map { it.packageName })
+        assertTrue(archived.single().isArchived)
+        assertNotNull(archived.single().componentName)
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun `restoreArchivedApp starts archived owner activity through LauncherApps`() {
+        val app =
+                AppInfo(
+                        packageName = "com.lu4p.reader",
+                        label = "Reader",
+                        icon = null,
+                        componentName =
+                                ComponentName(
+                                        "com.lu4p.reader",
+                                        "com.lu4p.reader.MainActivity",
+                                ),
+                        isArchived = true,
+                )
+
+        assertTrue(repository.restoreArchivedApp(app))
+
+        verify {
+            launcherApps.startMainActivity(app.componentName!!, myUser, null, null)
+        }
+    }
+
+    @Test
+    fun `getInstalledApps caches results on subsequent calls`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns listOf(createMockLauncherActivity("com.lu4p.app1", "App 1"))
+
+        repository.getInstalledApps()
+        repository.getInstalledApps()
+
+        verify(exactly = 1) { launcherApps.getActivityList(null, myUser) }
+    }
+
+    @Test
+    fun `getInstalledApps does not cache empty results`() {
+        every { launcherApps.getActivityList(null, myUser) } returns emptyList()
+
+        repository.getInstalledApps()
+        repository.getInstalledApps()
+
+        verify(atLeast = 2) { launcherApps.getActivityList(null, myUser) }
+    }
+
+    @Test
+    fun `getInstalledApps retries when owner profile is empty but work profile has apps`() {
+        val workUser = secondaryUserHandle()
+        every { userManager.userProfiles } returns listOf(myUser, workUser)
+        every { privateSpaceManager.isPrivateSpaceProfile(workUser) } returns false
+        var ownerCalls = 0
+        every { launcherApps.getActivityList(null, Process.myUserHandle()) } answers {
+            ownerCalls++
+            if (ownerCalls < 2) {
+                emptyList()
+            } else {
+                listOf(createMockLauncherActivity("com.lu4p.app1", "App 1"))
+            }
+        }
+        every {
+            launcherApps.getActivityList(null, workUser)
+        } returns listOf(createMockLauncherActivity("com.work.slack", "Slack"))
+
+        val result = repository.getInstalledApps()
+
+        assertTrue(result.any { it.userHandle == null })
+        assertTrue(result.any { it.userHandle == workUser })
+        assertTrue(ownerCalls >= 2)
+    }
+
+    @Test
+    fun `getInstalledApps does not cache work-only snapshot when owner stays empty`() {
+        val workUser = secondaryUserHandle()
+        every { userManager.userProfiles } returns listOf(myUser, workUser)
+        every { privateSpaceManager.isPrivateSpaceProfile(workUser) } returns false
+        every { launcherApps.getActivityList(null, Process.myUserHandle()) } returns emptyList()
+        every {
+            launcherApps.getActivityList(null, workUser)
+        } returns listOf(createMockLauncherActivity("com.work.slack", "Slack"))
+
+        repository.getInstalledApps()
+        repository.getInstalledApps()
+
+        verify(atLeast = 2) { launcherApps.getActivityList(null, Process.myUserHandle()) }
+    }
+
+    @Test
+    fun `getInstalledApps retries empty LauncherApps snapshot before giving up`() {
+        var calls = 0
+        every { launcherApps.getActivityList(null, myUser) } answers {
+            calls++
+            if (calls < 2) {
+                emptyList()
+            } else {
+                listOf(createMockLauncherActivity("com.lu4p.app1", "App 1"))
+            }
+        }
+
+        val result = repository.getInstalledApps()
+
+        assertEquals(1, result.size)
+        assertTrue(calls >= 2)
+    }
+
+    @Test
+    fun `invalidateCache forces reload on next call`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns listOf(createMockLauncherActivity("com.lu4p.app1", "App 1"))
+
+        repository.getInstalledApps()
+        repository.invalidateCache()
+        repository.getInstalledApps()
+
+        verify(exactly = 2) { launcherApps.getActivityList(null, myUser) }
+    }
+
+    @Test
+    fun `retrying an incomplete snapshot reloads without notifying observers`() {
+        every { launcherApps.getActivityList(null, myUser) } returns
+                listOf(createMockLauncherActivity("com.lu4p.app1", "App 1"))
+
+        repository.getInstalledApps()
+        repository.invalidateCacheForRetry()
+        repository.getInstalledApps()
+
+        verify(exactly = 2) { launcherApps.getActivityList(null, myUser) }
+        assertEquals(0L, repository.getInstalledAppsVersion().value)
+    }
+
+    @Test
+    fun `LauncherApps package added callback invalidates cache and schedules delayed refresh`() {
+        val callbackSlot = slot<LauncherApps.Callback>()
+        every { launcherApps.registerCallback(capture(callbackSlot), any()) } returns Unit
+        repository = AppRepository(context, appDao, privateSpaceManager, mockk(relaxed = true))
+
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns listOf(createMockLauncherActivity("com.lu4p.app1", "App 1"))
+        repository.getInstalledApps()
+
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns
+                listOf(
+                        createMockLauncherActivity("com.lu4p.app1", "App 1"),
+                        createMockLauncherActivity("com.lu4p.app2", "App 2"),
+                )
+        callbackSlot.captured.onPackageAdded("com.lu4p.app2", myUser)
+
+        assertEquals(
+                listOf("com.lu4p.app1", "com.lu4p.app2"),
+                repository.getInstalledApps().map { it.packageName },
+        )
+        assertEquals(1L, repository.getInstalledAppsVersion().value)
+
+        // Immediate reload can still see a stale LauncherApps snapshot; delayed refresh heals it.
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns
+                listOf(
+                        createMockLauncherActivity("com.lu4p.app1", "App 1"),
+                        createMockLauncherActivity("com.lu4p.app2", "App 2"),
+                        createMockLauncherActivity("com.lu4p.app3", "App 3"),
+                )
+        org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        assertEquals(2L, repository.getInstalledAppsVersion().value)
+        assertEquals(
+                listOf("com.lu4p.app1", "com.lu4p.app2", "com.lu4p.app3"),
+                repository.getInstalledApps().map { it.packageName },
+        )
+    }
+
+    @Test
+    fun `LauncherApps package removed callback refreshes without emitting uninstall`() =
+            runTest(UnconfinedTestDispatcher()) {
+                val callbackSlot = slot<LauncherApps.Callback>()
+                every { launcherApps.registerCallback(capture(callbackSlot), any()) } returns Unit
+                repository = AppRepository(context, appDao, privateSpaceManager, mockk(relaxed = true))
+
+                every {
+                    launcherApps.getActivityList(null, myUser)
+                } returns
+                        listOf(
+                                createMockLauncherActivity("com.lu4p.app1", "App 1"),
+                                createMockLauncherActivity("com.lu4p.app2", "App 2"),
+                        )
+                repository.getInstalledApps()
+
+                val removedApps = mutableListOf<RemovedApp>()
+                backgroundScope.launch {
+                    repository.getRemovedPackages().collect { removedApps += it }
+                }
+                every {
+                    launcherApps.getActivityList(null, myUser)
+                } returns listOf(createMockLauncherActivity("com.lu4p.app1", "App 1"))
+                callbackSlot.captured.onPackageRemoved("com.lu4p.app2", myUser)
+
+                assertTrue(removedApps.isEmpty())
+                assertEquals(
+                        listOf("com.lu4p.app1"),
+                        repository.getInstalledApps().map { it.packageName },
+                )
+            }
+
+    @Test
+    fun `LauncherApps packages unavailable callback refreshes without emitting uninstall`() =
+            runTest(UnconfinedTestDispatcher()) {
+                val callbackSlot = slot<LauncherApps.Callback>()
+                every { launcherApps.registerCallback(capture(callbackSlot), any()) } returns Unit
+                repository = AppRepository(context, appDao, privateSpaceManager, mockk(relaxed = true))
+
+                every {
+                    launcherApps.getActivityList(null, myUser)
+                } returns
+                        listOf(
+                                createMockLauncherActivity("com.lu4p.app1", "App 1"),
+                                createMockLauncherActivity("com.lu4p.app2", "App 2"),
+                        )
+                repository.getInstalledApps()
+
+                val removedApps = mutableListOf<RemovedApp>()
+                backgroundScope.launch {
+                    repository.getRemovedPackages().collect { removedApps += it }
+                }
+                every {
+                    launcherApps.getActivityList(null, myUser)
+                } returns listOf(createMockLauncherActivity("com.lu4p.app1", "App 1"))
+                callbackSlot.captured.onPackagesUnavailable(
+                        arrayOf("com.lu4p.app2"),
+                        myUser,
+                        false,
+                )
+
+                assertTrue(removedApps.isEmpty())
+                assertEquals(
+                        listOf("com.lu4p.app1"),
+                        repository.getInstalledApps().map { it.packageName },
+                )
+            }
+
+    @Test
+    fun `installed apps list matches drawer-style normalized label search`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns
+                listOf(
+                        createMockLauncherActivity("com.lu4p.chrome", "Chrome"),
+                        createMockLauncherActivity("com.lu4p.calendar", "Calendar"),
+                        createMockLauncherActivity("com.lu4p.camera", "Camera")
+                )
+
+        val all = repository.getInstalledApps()
+        val result =
+                all.filter { it.label.containsNormalizedSearch("ca") }.sortedBy {
+                    it.label.lowercase()
+                }
+
+        assertEquals(2, result.size)
+        assertEquals("Calendar", result[0].label)
+        assertEquals("Camera", result[1].label)
+    }
+
+    @Test
+    fun `normalized label search is accent-insensitive on installed apps`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns listOf(createMockLauncherActivity("com.lu4p.camera", "Càmera"))
+
+        val result =
+                repository.getInstalledApps().filter { it.label.containsNormalizedSearch("cam") }
+
+        assertEquals(1, result.size)
+        assertEquals("Càmera", result[0].label)
+    }
+
+    @Test
+    fun `blank search needle matches all installed apps`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns
+                listOf(
+                        createMockLauncherActivity("com.lu4p.app1", "App 1"),
+                        createMockLauncherActivity("com.lu4p.app2", "App 2")
+                )
+
+        val all = repository.getInstalledApps()
+        val result = all.filter { it.label.containsNormalizedSearch("") }
+
+        assertEquals(2, result.size)
+    }
+
+    @Test
+    fun `launchApp returns true when intent is found`() {
+        val launchIntent = mockk<Intent>(relaxed = true)
+        every { packageManager.getLaunchIntentForPackage("com.lu4p.app1") } returns launchIntent
+
+        val result = repository.launchApp("com.lu4p.app1")
+
+        assertTrue(result)
+        verify { context.startActivity(launchIntent, null) }
+    }
+
+    @Test
+    fun `launchApp starts the launcher activity the app list shows`() {
+        val settingsComponent = ComponentName("com.android.settings", "com.android.settings.Settings")
+        every { launcherApps.getActivityList("com.android.settings", myUser) } returns
+                listOf(
+                        createMockLauncherActivity(
+                                "com.android.settings",
+                                "Settings",
+                                activityName = settingsComponent.className,
+                        ),
+                        createMockLauncherActivity(
+                                "com.android.settings",
+                                "Emergency rescue",
+                                activityName = "com.android.settings.EmergencyRescue",
+                        ),
+                )
+        every { packageManager.getLaunchIntentForPackage("com.android.settings") } returns
+                mockk<Intent>(relaxed = true)
+
+        val result = repository.launchApp("com.android.settings")
+
+        assertTrue(result)
+        verify { launcherApps.startMainActivity(settingsComponent, myUser, null, null) }
+        verify(exactly = 0) { context.startActivity(any<Intent>(), any()) }
+    }
+
+    @Test
+    fun `launchApp returns false when no intent found`() {
+        val realContext = RuntimeEnvironment.getApplication().applicationContext as Context
+        val realRepository = AppRepository(
+                        realContext,
+                        appDao,
+                        PrivateSpaceManager(realContext),
+                        AppListSnapshotStore(realContext),
+                )
+
+        val result = realRepository.launchApp("com.lu4p.nonexistent")
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun `getInstalledApps deduplicates by package name on primary profile`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns
+                listOf(
+                        createMockLauncherActivity("com.lu4p.app1", "App 1"),
+                        createMockLauncherActivity("com.lu4p.app1", "App 1 Duplicate")
+                )
+
+        val result = repository.getInstalledApps()
+
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `getInstalledApps keeps same package from clone profile as separate entry`() {
+        val cloneUser = mockk<UserHandle>(relaxed = true)
+        every { userManager.userProfiles } returns listOf(myUser, cloneUser)
+        every { privateSpaceManager.isPrivateSpaceProfile(cloneUser) } returns false
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns listOf(createMockLauncherActivity("com.lu4p.whatsapp", "WhatsApp"))
+        val cloneActivity = createMockLauncherActivity("com.lu4p.whatsapp", "WhatsApp")
+        every { launcherApps.getActivityList(null, cloneUser) } returns listOf(cloneActivity)
+
+        val result = repository.getInstalledApps()
+
+        assertEquals(2, result.size)
+        assertEquals(1, result.count { it.userHandle == null })
+        assertEquals(1, result.count { it.userHandle == cloneUser })
+        assertNotNull(result.find { it.userHandle == cloneUser }?.componentName)
+        assertEquals("WhatsApp", result.find { it.userHandle == null }?.label)
+        assertEquals("WhatsApp", result.find { it.userHandle == cloneUser }?.label)
+    }
+
+    @Test
+    fun `getInstalledApps aligns managed profile labels with personal copy`() {
+        val workUser = mockk<UserHandle>(relaxed = true)
+        every { userManager.userProfiles } returns listOf(myUser, workUser)
+        every { privateSpaceManager.isPrivateSpaceProfile(workUser) } returns false
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns listOf(createMockLauncherActivity("com.lu4p.slack", "Slack"))
+        every {
+            launcherApps.getActivityList(null, workUser)
+        } returns listOf(createMockLauncherActivity("com.lu4p.slack", "Slack"))
+
+        val result = repository.getInstalledApps()
+
+        assertEquals("Slack", result.find { it.userHandle == null }?.label)
+        assertEquals("Slack", result.find { it.userHandle == workUser }?.label)
+    }
+
+    @Test
+    @Suppress("ReplaceCallWithBinaryOperator")
+    fun `getInstalledApps strips leading Work prefix when primary has no label for package`() {
+        val workUser = mockk<UserHandle>(relaxed = true)
+        every { workUser.equals(any()) } answers { firstArg<Any?>() === workUser }
+        every { userManager.userProfiles } returns listOf(workUser)
+        every { privateSpaceManager.isPrivateSpaceProfile(workUser) } returns false
+        every {
+            launcherApps.getActivityList(null, workUser)
+        } returns listOf(createMockLauncherActivity("com.whatsapp", "Work WhatsApp"))
+
+        val result = repository.getInstalledApps()
+
+        assertEquals(1, result.size)
+        assertEquals("WhatsApp", result.single().label)
+        assertEquals(workUser, result.single().userHandle)
+    }
+
+    @Test
+    fun `getInstalledApps does not add clone suffix when multiple secondary profiles exist`() {
+        val userA = mockk<UserHandle>(relaxed = true)
+        val userB = mockk<UserHandle>(relaxed = true)
+        every { userManager.userProfiles } returns listOf(myUser, userA, userB)
+        every { privateSpaceManager.isPrivateSpaceProfile(any()) } returns false
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns listOf(createMockLauncherActivity("com.lu4p.app", "App"))
+        every {
+            launcherApps.getActivityList(null, userA)
+        } returns listOf(createMockLauncherActivity("com.lu4p.onlya", "Only A"))
+        every {
+            launcherApps.getActivityList(null, userB)
+        } returns listOf(createMockLauncherActivity("com.lu4p.onlyb", "Only B"))
+
+        val result = repository.getInstalledApps()
+
+        assertEquals("Only A", result.find { it.packageName == "com.lu4p.onlya" }!!.label)
+        assertEquals("Only B", result.find { it.packageName == "com.lu4p.onlyb" }!!.label)
+    }
+
+    @Test
+    fun `getInstalledApps uses Android app category for games`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns
+                listOf(
+                        createMockLauncherActivity(
+                                packageName = "com.lu4p.runner",
+                                label = "Runner",
+                                category = ApplicationInfo.CATEGORY_GAME
+                        )
+                )
+
+        val result = repository.getInstalledApps()
+
+        assertEquals("Games", result.single().category)
+    }
+
+    @Test
+    fun `getInstalledApps falls back to Utilities when no system category exists`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns
+                listOf(
+                        createMockLauncherActivity(
+                                packageName = "com.supercell.clashofclans",
+                                label = "Clash of Clans"
+                        )
+                )
+
+        val result = repository.getInstalledApps()
+
+        assertEquals("Utilities", result.single().category)
+    }
+
+    @Test
+    fun `getInstalledApps falls back to legacy query when LauncherApps missing`() {
+        every { context.getSystemService(Context.LAUNCHER_APPS_SERVICE) } returns null
+        val legacyRepo = AppRepository(context, appDao, privateSpaceManager, mockk(relaxed = true))
+
+        val resolveInfos =
+                listOf(
+                        createResolveInfo("com.lu4p.chrome", "Chrome"),
+                        createResolveInfo("com.lu4p.fokuslauncher", "Fokus Launcher")
+                )
+        every { packageManager.queryIntentActivities(any<Intent>(), any<Int>()) } returns
+                resolveInfos
+
+        val result = legacyRepo.getInstalledApps()
+
+        assertEquals(1, result.size)
+        assertEquals("Chrome", result.single().label)
+    }
+
+    @Test
+    fun `getInstalledApps includes pinned launcher shortcuts as PWA entries`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns listOf(createMockLauncherActivity("org.mozilla.firefox", "Firefox"))
+        every { launcherApps.getShortcuts(any(), myUser) } returns
+                listOf(createMockShortcut("pwa-twitter", "Twitter"))
+
+        val result = repository.getInstalledApps()
+
+        assertEquals(2, result.size)
+        val shortcut = result.single { it.launcherShortcutId == "pwa-twitter" }
+        assertEquals("org.mozilla.firefox", shortcut.packageName)
+        assertEquals("Twitter", shortcut.label)
+    }
+
+    @Test
+    fun `getInstalledApps ignores disabled pinned launcher shortcuts`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns listOf(createMockLauncherActivity("org.mozilla.firefox", "Firefox"))
+        every { launcherApps.getShortcuts(any(), myUser) } returns
+                listOf(createMockShortcut("pwa-twitter", "Twitter", enabled = false))
+
+        val result = repository.getInstalledApps()
+
+        assertTrue(result.none { it.launcherShortcutId == "pwa-twitter" })
+    }
+
+    @Test
+    fun `getAllShortcutActions with browser and PWAs has no duplicate ids`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns listOf(createMockLauncherActivity("org.mozilla.firefox", "Firefox"))
+        every { launcherApps.getShortcuts(any(), myUser) } returns
+                listOf(
+                        createMockShortcut("pwa-twitter", "Twitter"),
+                        createMockShortcut("pwa-reddit", "Reddit"),
+                )
+
+        val result = repository.getAllShortcutActions()
+        val openAppActions =
+                result.filter {
+                    it.actionLabel == AppShortcutAction.OPEN_APP_LABEL &&
+                            it.target == com.lu4p.fokuslauncher.data.model.ShortcutTarget.App(
+                                    "org.mozilla.firefox",
+                            )
+                }
+
+        assertEquals(1, openAppActions.size)
+        assertEquals(result.size, result.distinctBy { it.id }.size)
+    }
+
+    @Test
+    fun `getAllShortcutActions includes owner-profile in-app shortcuts`() {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns listOf(createMockLauncherActivity("com.google.android.gm", "Gmail"))
+        every { launcherApps.getShortcuts(any(), myUser) } returns
+                listOf(
+                        createMockShortcut("compose", "Compose"),
+                        createMockShortcut("search", "Search"),
+                )
+
+        val result = repository.getAllShortcutActions()
+        val gmailActions =
+                result.filter {
+                    val target = it.target
+                    target is com.lu4p.fokuslauncher.data.model.ShortcutTarget.LauncherShortcut &&
+                            target.packageName == "com.google.android.gm"
+                }
+
+        assertEquals(2, gmailActions.size)
+        assertTrue(gmailActions.any { it.actionLabel == "Compose" && it.appLabel == "Gmail" })
+        assertTrue(gmailActions.any { it.actionLabel == "Search" && it.appLabel == "Gmail" })
+    }
+
+    // --- Snapshot-first Tests ---
+
+    private fun snapshotRepository(dispatcher: CoroutineDispatcher): AppRepository {
+        val realContext = RuntimeEnvironment.getApplication().applicationContext as Context
+        every { context.filesDir } returns realContext.filesDir
+        return AppRepository(
+                context,
+                appDao,
+                privateSpaceManager,
+                AppListSnapshotStore(realContext),
+                dispatcher,
+        )
+    }
+
+    private fun writeSnapshot(dispatcher: TestDispatcher, vararg packages: String) {
+        every { launcherApps.getActivityList(null, myUser) } returns
+                packages.map { createMockLauncherActivity(it, it) }
+        snapshotRepository(dispatcher).getInstalledApps()
+        dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Test
+    fun `getAppsSnapshotFirst serves the persisted list then bumps the version once`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        writeSnapshot(dispatcher, "com.lu4p.gone", "com.lu4p.kept")
+        every { launcherApps.getActivityList(null, myUser) } returns
+                listOf(createMockLauncherActivity("com.lu4p.kept", "com.lu4p.kept"))
+        val coldRepository = snapshotRepository(dispatcher)
+
+        val served = coldRepository.getAppsSnapshotFirst()
+
+        assertEquals(listOf("com.lu4p.gone", "com.lu4p.kept"), served.installed.map { it.packageName })
+        assertEquals(0L, coldRepository.getInstalledAppsVersion().value)
+
+        advanceUntilIdle()
+
+        assertEquals(1L, coldRepository.getInstalledAppsVersion().value)
+        assertEquals(
+                listOf("com.lu4p.kept"),
+                coldRepository.getAppsSnapshotFirst().installed.map { it.packageName },
+        )
+        coldRepository.invalidateCache()
+        assertEquals("com.lu4p.kept", coldRepository.getAppsSnapshotFirst().installed.single().packageName)
+    }
+
+    @Test
+    fun `drawer rebuilds reuse the served snapshot while reconciliation is pending`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        writeSnapshot(dispatcher, "com.lu4p.old")
+        val scans = AtomicInteger()
+        every { launcherApps.getActivityList(null, myUser) } answers {
+            scans.incrementAndGet()
+            listOf(createMockLauncherActivity("com.lu4p.new", "com.lu4p.new"))
+        }
+        val coldRepository = snapshotRepository(dispatcher)
+
+        val first = coldRepository.getAppsSnapshotFirst()
+        val metadataRebuild = coldRepository.getAppsSnapshotFirst()
+
+        assertEquals(first, metadataRebuild)
+        assertEquals(0, scans.get())
+        advanceUntilIdle()
+        assertEquals(1, scans.get())
+        assertEquals("com.lu4p.new", coldRepository.getAppsSnapshotFirst().installed.single().packageName)
+    }
+
+    @Test
+    fun `getAppsSnapshotFirst does not bump the version when the scan matches the snapshot`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        writeSnapshot(dispatcher, "com.lu4p.app1", "com.lu4p.app2")
+        val coldRepository = snapshotRepository(dispatcher)
+
+        val served = coldRepository.getAppsSnapshotFirst()
+        advanceUntilIdle()
+
+        assertEquals(listOf("com.lu4p.app1", "com.lu4p.app2"), served.installed.map { it.packageName })
+        assertEquals(0L, coldRepository.getInstalledAppsVersion().value)
+    }
+
+    @Test
+    fun `getAppsSnapshotFirst scans instead of re-serving the snapshot after an empty reconcile`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        writeSnapshot(dispatcher, "com.lu4p.app1")
+        every { launcherApps.getActivityList(null, myUser) } returns emptyList()
+        val coldRepository = snapshotRepository(dispatcher)
+
+        val served = coldRepository.getAppsSnapshotFirst()
+        advanceUntilIdle()
+        val next = coldRepository.getAppsSnapshotFirst()
+
+        assertEquals(listOf("com.lu4p.app1"), served.installed.map { it.packageName })
+        assertEquals(0L, coldRepository.getInstalledAppsVersion().value)
+        assertTrue(next.installed.isEmpty())
+    }
+
+    @Test
+    fun `getAppsSnapshotFirst still serves the snapshot after a plain cache invalidation`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        writeSnapshot(dispatcher, "com.lu4p.gone", "com.lu4p.kept")
+        every { launcherApps.getActivityList(null, myUser) } returns
+                listOf(createMockLauncherActivity("com.lu4p.kept", "com.lu4p.kept"))
+        val coldRepository = snapshotRepository(dispatcher)
+        coldRepository.invalidateCache()
+
+        val served = coldRepository.getAppsSnapshotFirst()
+
+        assertEquals(listOf("com.lu4p.gone", "com.lu4p.kept"), served.installed.map { it.packageName })
+    }
+
+    @Test
+    fun `getAppsSnapshotFirst skips the snapshot after a package event`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        writeSnapshot(dispatcher, "com.lu4p.gone")
+        every { launcherApps.getActivityList(null, myUser) } returns
+                listOf(createMockLauncherActivity("com.lu4p.kept", "com.lu4p.kept"))
+        val callbackSlot = slot<LauncherApps.Callback>()
+        every { launcherApps.registerCallback(capture(callbackSlot), any()) } returns Unit
+        val coldRepository = snapshotRepository(dispatcher)
+        callbackSlot.captured.onPackageRemoved("com.lu4p.gone", myUser)
+
+        val served = coldRepository.getAppsSnapshotFirst()
+
+        assertEquals(listOf("com.lu4p.kept"), served.installed.map { it.packageName })
+    }
+
+    @Test
+    fun `a scan that raced an invalidation is not persisted`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        writeSnapshot(dispatcher, "com.lu4p.before")
+        val racingRepository = snapshotRepository(dispatcher)
+        every { launcherApps.getActivityList(null, myUser) } answers {
+            racingRepository.invalidateCache()
+            listOf(createMockLauncherActivity("com.lu4p.after", "com.lu4p.after"))
+        }
+
+        racingRepository.getInstalledApps()
+        advanceUntilIdle()
+
+        assertEquals(
+                listOf("com.lu4p.before"),
+                snapshotRepository(dispatcher).getAppsSnapshotFirst().installed.map { it.packageName },
+        )
+    }
+
+    @Test
+    fun `a queued snapshot write is discarded after invalidation`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        writeSnapshot(dispatcher, "com.lu4p.previous")
+        every { launcherApps.getActivityList(null, myUser) } returns
+                listOf(createMockLauncherActivity("com.lu4p.stale", "com.lu4p.stale"))
+        val racingRepository = snapshotRepository(dispatcher)
+
+        racingRepository.getInstalledApps()
+        racingRepository.invalidateCache()
+        advanceUntilIdle()
+
+        val realContext = RuntimeEnvironment.getApplication().applicationContext as Context
+        assertEquals(
+                listOf("com.lu4p.previous"),
+                AppListSnapshotStore(realContext).read()?.map { it.packageName },
+        )
+    }
+
+    @Test
+    fun `an older scan does not overwrite a newer scan on disk`() {
+        val lifo = LifoDispatcher()
+        val repository = snapshotRepository(lifo)
+        val calls = AtomicInteger()
+        every { launcherApps.getActivityList(null, myUser) } answers {
+            if (calls.incrementAndGet() == 1) {
+                repository.getInstalledApps()
+                listOf(createMockLauncherActivity("com.lu4p.newer", "com.lu4p.newer"))
+            } else {
+                listOf(createMockLauncherActivity("com.lu4p.older", "com.lu4p.older"))
+            }
+        }
+
+        repository.getInstalledApps()
+        lifo.drainNewestFirst()
+
+        assertEquals(
+                listOf("com.lu4p.newer"),
+                snapshotRepository(lifo).getAppsSnapshotFirst().installed.map { it.packageName },
+        )
+    }
+
+    @Test
+    fun `reconcile requests a rebuild when invalidated during the scan`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        writeSnapshot(dispatcher, "com.lu4p.gone")
+        val coldRepository = snapshotRepository(dispatcher)
+
+        coldRepository.getAppsSnapshotFirst()
+        every { launcherApps.getActivityList(null, myUser) } answers {
+            coldRepository.invalidateCache()
+            listOf(createMockLauncherActivity("com.lu4p.kept", "com.lu4p.kept"))
+        }
+        advanceUntilIdle()
+
+        assertEquals(2L, coldRepository.getInstalledAppsVersion().value)
+    }
+
+    /** Queues dispatched blocks; [drainNewestFirst] runs them in reverse order. */
+    private class LifoDispatcher : CoroutineDispatcher() {
+        private val queue = ArrayDeque<Runnable>()
+
+        override fun dispatch(context: CoroutineContext, block: Runnable) {
+            queue.addLast(block)
+        }
+
+        fun drainNewestFirst() {
+            while (queue.isNotEmpty()) queue.removeLast().run()
+        }
+    }
+
+    // --- Hidden Apps Tests ---
+
+    @Test
+    fun `hideApp delegates to DAO`() = runTest {
+        repository.hideApp("com.lu4p.app1", "0")
+
+        coVerify {
+            appDao.hideApp(
+                    HiddenAppEntity("com.lu4p.app1", "0", HOST_APP_METADATA_SENTINEL)
+            )
+            appDao.unhideApp(
+                    HiddenAppEntity("com.lu4p.app1", "0", LEGACY_PACKAGE_WIDE_METADATA)
+            )
+        }
+    }
+
+    @Test
+    fun `unhideApp delegates to DAO`() = runTest {
+        repository.unhideApp("com.lu4p.app1", "0", "")
+
+        coVerify { appDao.unhideApp(HiddenAppEntity("com.lu4p.app1", "0", "")) }
+    }
+
+    @Test
+    fun `getHiddenApps returns flow from DAO`() {
+        every { appDao.getHiddenApps() } returns
+            flowOf(listOf(HiddenAppEntity("com.lu4p.hidden", "0")))
+
+        val result = repository.getHiddenApps()
+
+        // Flow is returned directly from DAO
+        assertEquals(appDao.getHiddenApps(), result)
+    }
+
+    // --- Renamed Apps Tests ---
+
+    @Test
+    fun `renameApp delegates to DAO`() = runTest {
+        repository.renameApp("com.lu4p.app1", "0", "My Custom Name")
+
+        coVerify {
+            appDao.renameApp(
+                    RenamedAppEntity(
+                            "com.lu4p.app1",
+                            "0",
+                            "My Custom Name",
+                            HOST_APP_METADATA_SENTINEL,
+                    )
+            )
+            appDao.removeRename("com.lu4p.app1", "0", LEGACY_PACKAGE_WIDE_METADATA)
+        }
+    }
+
+    // --- Category Tests ---
+
+    @Test
+    fun `setAppCategory delegates to DAO`() = runTest {
+        repository.setAppCategory("com.lu4p.app1", "0", "Productivity")
+
+        coVerify {
+            appDao.setAppCategory(
+                    AppCategoryEntity(
+                            "com.lu4p.app1",
+                            "0",
+                            "Productivity",
+                            HOST_APP_METADATA_SENTINEL,
+                    )
+            )
+            appDao.removeAppCategory("com.lu4p.app1", "0", LEGACY_PACKAGE_WIDE_METADATA)
+        }
+    }
+
+    @Test
+    fun `setAppCategory normalizes localized inferred category names`() = runTest {
+        val realContext = RuntimeEnvironment.getApplication().applicationContext as Context
+        val realRepository = AppRepository(
+                        realContext,
+                        appDao,
+                        PrivateSpaceManager(realContext),
+                        AppListSnapshotStore(realContext),
+                )
+
+        realRepository.setAppCategory("com.lu4p.app1", "0", "Produktivität")
+
+        coVerify {
+            appDao.setAppCategory(
+                    AppCategoryEntity(
+                            "com.lu4p.app1",
+                            "0",
+                            "Productivity",
+                            HOST_APP_METADATA_SENTINEL,
+                    )
+            )
+        }
+    }
+
+    @Test
+    fun `getAllAppCategories normalizes legacy localized inferred categories`() = runTest {
+        val realContext = RuntimeEnvironment.getApplication().applicationContext as Context
+        every { appDao.getAllAppCategories() } returns
+                flowOf(listOf(AppCategoryEntity("com.lu4p.app1", "0", "Spiele")))
+        val realRepository = AppRepository(
+                        realContext,
+                        appDao,
+                        PrivateSpaceManager(realContext),
+                        AppListSnapshotStore(realContext),
+                )
+
+        val result = realRepository.getAllAppCategories().first()
+
+        assertEquals("Games", result.single().category)
+    }
+
+    @Test
+    fun `addCategoryDefinition rejects reserved category names`() = runTest {
+        assertEquals(
+                AddCategoryResult.Failure.ReservedAllApps,
+                repository.addCategoryDefinition("All apps")
+        )
+        assertEquals(
+                AddCategoryResult.Failure.ReservedPrivate,
+                repository.addCategoryDefinition("Private")
+        )
+        assertEquals(AddCategoryResult.Failure.Blank, repository.addCategoryDefinition("   "))
+
+        coVerify(exactly = 0) { appDao.upsertCategoryDefinition(any()) }
+    }
+
+    @Test
+    fun `clearAllAppData clears tables and restores default category definitions`() = runTest {
+        val expectedDefaults =
+                SystemCategoryKeys.defaultOrderedCategoryNames().mapIndexed { index, name ->
+                    AppCategoryDefinitionEntity(name, index)
+                }
+
+        repository.clearAllAppData()
+
+        coVerify { appDao.resetAllAppData(expectedDefaults) }
+    }
+
+    @Test
+    fun `addCategoryDefinition stores normalized category name`() = runTest {
+        every { appDao.getAllCategoryDefinitions() } returns flowOf(emptyList())
+        coEvery { appDao.getMaxCategoryDefinitionPosition() } returns 3
+
+        val result = repository.addCategoryDefinition("  My Category  ")
+
+        assertEquals(AddCategoryResult.Success, result)
+        coVerify { appDao.upsertCategoryDefinition(AppCategoryDefinitionEntity("My Category", 4)) }
+    }
+
+    @Test
+    fun `addCategoryDefinition returns duplicate when name exists`() = runTest {
+        every { appDao.getAllCategoryDefinitions() } returns
+                flowOf(listOf(AppCategoryDefinitionEntity("Games", 0)))
+        coEvery { appDao.getMaxCategoryDefinitionPosition() } returns 0
+
+        assertEquals(
+                AddCategoryResult.Failure.Duplicate("Games"),
+                repository.addCategoryDefinition("Games")
+        )
+        coVerify(exactly = 0) { appDao.upsertCategoryDefinition(any()) }
+    }
+
+    @Test
+    fun `renameCategory ignores reserved category names`() = runTest {
+        repository.renameCategory("All apps", "Work")
+        repository.renameCategory("Work", "Private")
+
+        coVerify(exactly = 0) { appDao.renameCategoryAssignments(any(), any()) }
+    }
+
+    @Test
+    fun `deleteCategory ignores reserved category names`() = runTest {
+        repository.deleteCategory("All apps")
+        repository.deleteCategory("Private")
+
+        coVerify(exactly = 0) { appDao.deleteCategoryWithAppResets(any(), any()) }
+    }
+
+    @Test
+    fun `addCategoryDefinition removes suppressed category entry`() = runTest {
+        every { appDao.getAllCategoryDefinitions() } returns flowOf(emptyList())
+        coEvery { appDao.getMaxCategoryDefinitionPosition() } returns 0
+
+        repository.addCategoryDefinition("Games")
+
+        coVerify { appDao.upsertCategoryDefinition(AppCategoryDefinitionEntity("Games", 1)) }
+        coVerify { appDao.removeSuppressedCategoryDefinition("Games") }
+    }
+
+    @Test
+    fun `deleteCategory records suppressed category definition`() = runTest {
+        val realContext = RuntimeEnvironment.getApplication().applicationContext as Context
+        val db =
+                Room.inMemoryDatabaseBuilder(realContext, AppDatabase::class.java)
+                        .allowMainThreadQueries()
+                        .build()
+        try {
+            val realDao = db.appDao()
+            every {
+                launcherApps.getActivityList(null, myUser)
+            } returns
+                    listOf(
+                            createMockLauncherActivity(
+                                    "com.lu4p.game",
+                                    "Game",
+                                    ApplicationInfo.CATEGORY_GAME
+                            )
+                    )
+            val realRepository =
+                    AppRepository(
+                            realContext,
+                            realDao,
+                            PrivateSpaceManager(realContext),
+                            AppListSnapshotStore(realContext),
+                    )
+            realRepository.invalidateCache()
+            realRepository.deleteCategory("Games")
+
+            assertEquals(
+                    listOf(SuppressedCategoryDefinitionEntity("Games")),
+                    realDao.getAllSuppressedCategoryDefinitions().first(),
+            )
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun `deleteCategory clears apps that only have system inferred category`() = runTest {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns
+                listOf(
+                        createMockLauncherActivity(
+                                "com.lu4p.game",
+                                "Game",
+                                ApplicationInfo.CATEGORY_GAME
+                        )
+                )
+        every { appDao.getAllAppCategories() } returns flowOf(emptyList())
+
+        repository.invalidateCache()
+        repository.deleteCategory("Games")
+
+        coVerify {
+            appDao.deleteCategoryWithAppResets(
+                    listOf(
+                            AppCategoryEntity(
+                                    "com.lu4p.game",
+                                    "0",
+                                    "",
+                                    HOST_APP_METADATA_SENTINEL,
+                            )
+                    ),
+                    "Games"
+            )
+        }
+    }
+
+    @Test
+    fun `deleteCategory clears explicit Room assignments matching name`() = runTest {
+        every {
+            launcherApps.getActivityList(null, myUser)
+        } returns
+                listOf(
+                        createMockLauncherActivity(
+                                "com.lu4p.app1",
+                                "App",
+                                ApplicationInfo.CATEGORY_UNDEFINED
+                        )
+                )
+        every { appDao.getAllAppCategories() } returns
+                flowOf(listOf(AppCategoryEntity("com.lu4p.app1", "0", "Games")))
+
+        repository.invalidateCache()
+        repository.deleteCategory("Games")
+
+        coVerify {
+            appDao.deleteCategoryWithAppResets(
+                    listOf(
+                            AppCategoryEntity(
+                                    "com.lu4p.app1",
+                                    "0",
+                                    "",
+                                    HOST_APP_METADATA_SENTINEL,
+                            )
+                    ),
+                    "Games"
+            )
+        }
+    }
+
+    @Test
+    fun `unpinLauncherShortcut keeps other pins and does not pin cached shortcuts`() {
+        val pinned = listOf(createMockShortcut("removed", "Removed"), createMockShortcut("kept", "Kept"))
+        val cached = listOf(createMockShortcut("conversation", "Conversation"))
+        val queryFlagsField =
+                LauncherApps.ShortcutQuery::class.java.getDeclaredField("mQueryFlags").apply {
+                    isAccessible = true
+                }
+        every { launcherApps.getShortcuts(any(), myUser) } answers {
+            val flags = queryFlagsField.getInt(firstArg())
+            (if (flags and LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED != 0) pinned else emptyList()) +
+                    (if (flags and LauncherApps.ShortcutQuery.FLAG_MATCH_CACHED != 0) cached else emptyList())
+        }
+
+        assertTrue(repository.unpinLauncherShortcut("com.whatsapp", "removed", myUser))
+
+        verify(exactly = 1) { launcherApps.pinShortcuts("com.whatsapp", listOf("kept"), myUser) }
+    }
+
+    // --- Helpers ---
+
+    /** Real non-owner [UserHandle]; relaxed mocks match too broadly as MockK argument matchers. */
+    private fun secondaryUserHandle(userId: Int = 10): UserHandle {
+        val constructor = UserHandle::class.java.getDeclaredConstructor(Int::class.javaPrimitiveType)
+        constructor.isAccessible = true
+        return constructor.newInstance(userId)
+    }
+
+    private fun createMockLauncherActivity(
+            packageName: String,
+            label: String,
+            category: Int = ApplicationInfo.CATEGORY_UNDEFINED,
+            flags: Int = 0,
+            archived: Boolean = false,
+            activityName: String = "$packageName.MainActivity",
+    ): android.content.pm.LauncherActivityInfo {
+        val mockLa = mockk<android.content.pm.LauncherActivityInfo>(relaxed = true)
+        val appInfo =
+                ApplicationInfo().apply {
+                    this.packageName = packageName
+                    this.category = category
+                    this.flags = flags
+                    this.isArchived = archived
+                }
+        every { mockLa.applicationInfo } returns appInfo
+        every { mockLa.label } returns label
+        every { mockLa.componentName } returns ComponentName(packageName, activityName)
+        every { mockLa.getBadgedIcon(0) } returns null
+        return mockLa
+    }
+
+    private fun createResolveInfo(
+            packageName: String,
+            label: String,
+            category: Int = ApplicationInfo.CATEGORY_UNDEFINED,
+            flags: Int = 0
+    ): android.content.pm.ResolveInfo {
+        return android.content.pm.ResolveInfo().apply {
+            activityInfo =
+                    android.content.pm.ActivityInfo().apply {
+                        this.packageName = packageName
+                        this.name = "$packageName.MainActivity"
+                        applicationInfo =
+                                ApplicationInfo().apply {
+                                    this.packageName = packageName
+                                    this.category = category
+                                    this.flags = flags
+                                }
+                    }
+            nonLocalizedLabel = label
+        }
+    }
+
+    private fun createMockShortcut(
+            id: String,
+            label: String,
+            enabled: Boolean = true
+    ): ShortcutInfo {
+        val shortcut = mockk<ShortcutInfo>(relaxed = true)
+        every { shortcut.id } returns id
+        every { shortcut.shortLabel } returns label
+        every { shortcut.longLabel } returns null
+        every { shortcut.isEnabled } returns enabled
+        return shortcut
+    }
+
+    @Test
+    fun `appSupportsWebSearch true when package resolves WEB_SEARCH`() {
+        val app = AppInfo("com.browser", "Browser", null)
+        every {
+            packageManager.queryIntentActivities(any(), PackageManager.MATCH_DEFAULT_ONLY)
+        } returns listOf(createResolveInfo("com.browser", "Browser"))
+        assertTrue(repository.appSupportsWebSearch(app))
+    }
+
+    @Test
+    fun `appSupportsWebSearch false when query returns empty`() {
+        val app = AppInfo("com.nope", "Nope", null)
+        every {
+            packageManager.queryIntentActivities(any(), PackageManager.MATCH_DEFAULT_ONLY)
+        } returns emptyList()
+        assertFalse(repository.appSupportsWebSearch(app))
+    }
+
+    @Test
+    fun `openAppInfo uses LauncherApps startAppDetailsActivity for secondary profile`() {
+        val secondaryUser = mockk<UserHandle>()
+        val component = ComponentName("com.private.app", "MainActivity")
+        every { secondaryUser == Process.myUserHandle() } returns false
+        every { launcherApps.getActivityList("com.private.app", secondaryUser) } returns emptyList()
+
+        assertTrue(repository.openAppInfo("com.private.app", secondaryUser, component))
+
+        verify {
+            launcherApps.startAppDetailsActivity(component, secondaryUser, null, null)
+        }
+        verify(exactly = 0) { context.startActivity(any()) }
+    }
+
+    @Test
+    fun `openAppInfo resolves component from activity list when missing`() {
+        val activity = createMockLauncherActivity("com.work.slack", "Slack")
+        every { launcherApps.getActivityList("com.work.slack", any()) } returns listOf(activity)
+
+        assertTrue(repository.openAppInfo("com.work.slack", null, null))
+
+        verify {
+            launcherApps.startAppDetailsActivity(
+                    ComponentName("com.work.slack", "com.work.slack.MainActivity"),
+                    any(),
+                    null,
+                    null,
+            )
+        }
+    }
+
+    @Test
+    fun `startPackageManagementIntent uses owner context without EXTRA_USER`() {
+        val intentSlot = slot<Intent>()
+        every { context.startActivity(capture(intentSlot)) } returns Unit
+
+        assertTrue(
+                repository.startPackageManagementIntent(
+                        "com.example",
+                        myUser,
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                )
+        )
+
+        verify { context.startActivity(any()) }
+        assertEquals(Uri.parse("package:com.example"), intentSlot.captured.data)
+        assertFalse(intentSlot.captured.hasExtra(Intent.EXTRA_USER))
+    }
+
+    @Test
+    fun `appSupportsWebSearch true when only ACTION_SEARCH resolves`() {
+        val app = AppInfo("com.searchapp", "SearchApp", null)
+        every {
+            packageManager.queryIntentActivities(any(), PackageManager.MATCH_DEFAULT_ONLY)
+        } answers {
+            val intent = invocation.args[0] as Intent
+            when (intent.action) {
+                Intent.ACTION_WEB_SEARCH -> emptyList()
+                Intent.ACTION_SEARCH ->
+                        listOf(createResolveInfo("com.searchapp", "SearchApp"))
+                else -> emptyList()
+            }
+        }
+        assertTrue(repository.appSupportsWebSearch(app))
+    }
+}

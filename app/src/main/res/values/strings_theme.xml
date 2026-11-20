@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_studio_title">Theme Studio</string>
+    <string name="theme_studio_subtitle">Colours and themes for the whole launcher</string>
+    <string name="theme_studio_section_themes">Themes</string>
+    <string name="theme_studio_section_preview">Preview</string>
+    <string name="theme_studio_section_colors">Colours</string>
+    <string name="theme_studio_section_actions">Manage</string>
+    <string name="theme_studio_preview_clock">09:41</string>
+    <string name="theme_studio_preview_primary">Primary text</string>
+    <string name="theme_studio_preview_secondary">Secondary text</string>
+    <string name="theme_studio_preview_accent">Accent</string>
+    <string name="theme_studio_badge_applied">Applied</string>
+    <string name="theme_studio_badge_custom">Custom</string>
+    <string name="theme_studio_badge_edited">Edited</string>
+    <string name="theme_studio_none_applied">No theme applied (classic look)</string>
+    <string name="theme_studio_apply">Apply</string>
+    <string name="theme_studio_reset">Reset to classic look</string>
+    <string name="theme_studio_save">Save as custom theme</string>
+    <string name="theme_studio_update">Save changes</string>
+    <string name="theme_studio_rename">Rename</string>
+    <string name="theme_studio_delete">Delete</string>
+    <string name="theme_studio_export">Copy theme JSON</string>
+    <string name="theme_studio_import">Import theme JSON</string>
+    <string name="theme_studio_discard">Discard edits</string>
+    <string name="theme_studio_color_background">Background</string>
+    <string name="theme_studio_color_primary_text">Primary text</string>
+    <string name="theme_studio_color_secondary_text">Secondary text</string>
+    <string name="theme_studio_color_accent">Accent</string>
+    <string name="theme_studio_color_surface">Surface</string>
+    <string name="theme_studio_color_invalid">Use the form #RRGGBB</string>
+    <string name="theme_studio_low_contrast">Primary text is too close to the background to read comfortably. Change it to save or apply.</string>
+    <string name="theme_studio_name_label">Theme name</string>
+    <string name="theme_studio_default_name">My theme</string>
+    <string name="theme_studio_delete_title">Delete theme?</string>
+    <string name="theme_studio_delete_message">\"%1$s\" will be removed. If it is applied, the launcher returns to the classic look.</string>
+    <string name="theme_studio_import_title">Import theme</string>
+    <string name="theme_studio_import_hint">Paste theme JSON. It is only read as data and checked before it is saved.</string>
+    <string name="theme_studio_import_ok">Theme imported</string>
+    <string name="theme_studio_import_failed">That is not a valid theme, nothing was changed</string>
+    <string name="theme_studio_limit_reached">Custom theme limit reached, delete one first</string>
+    <string name="theme_studio_exported">Theme JSON copied</string>
+    <string name="theme_studio_saved">Theme saved</string>
+    <string name="theme_studio_save_failed">Could not save this theme</string>
+    <string name="theme_studio_ok">OK</string>
+    <string name="theme_studio_cancel">Cancel</string>
+</resources>

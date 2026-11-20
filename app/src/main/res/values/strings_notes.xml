@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notes_settings_title">Notes</string>
+    <string name="notes_settings_subtitle">Write notes and pin one to the home screen</string>
+    <string name="notes_privacy_note">Notes are stored only on this device.</string>
+    <string name="notes_new">New note</string>
+    <string name="notes_empty">No notes yet</string>
+    <string name="notes_untitled">Untitled</string>
+    <string name="notes_pinned_badge">Pinned to home</string>
+    <string name="notes_pin">Pin to home</string>
+    <string name="notes_unpin">Unpin</string>
+    <string name="notes_delete">Delete</string>
+    <string name="notes_delete_confirm_title">Delete this note?</string>
+    <string name="notes_delete_confirm_body">This cannot be undone.</string>
+    <string name="notes_cancel">Cancel</string>
+    <string name="notes_title_hint">Title (optional)</string>
+    <string name="notes_body_hint">Write something</string>
+    <string name="notes_edited">Edited %1$s</string>
+    <string name="notes_appearance">Appearance</string>
+    <string name="notes_font">Font</string>
+    <string name="notes_font_size">Size %1$d sp</string>
+    <string name="notes_font_weight">Weight</string>
+    <string name="notes_text_color">Text colour</string>
+    <string name="notes_alignment">Alignment</string>
+    <string name="notes_align_start">Start</string>
+    <string name="notes_align_center">Centre</string>
+    <string name="notes_align_end">End</string>
+    <string name="notes_line_spacing">Line spacing %1$s</string>
+    <string name="notes_background">Background</string>
+    <string name="notes_padding">Padding %1$d dp</string>
+    <string name="notes_max_lines">Lines on home screen %1$d</string>
+    <string name="notes_color_default">Default</string>
+    <string name="notes_color_transparent">None</string>
+    <string name="notes_color_white">White</string>
+    <string name="notes_color_black">Black</string>
+    <string name="notes_color_amber">Amber</string>
+    <string name="notes_color_green">Green</string>
+    <string name="notes_color_blue">Blue</string>
+    <string name="notes_color_rose">Rose</string>
+    <string name="notes_color_scrim">Dark glass</string>
+    <string name="notes_back">Back</string>
+</resources>

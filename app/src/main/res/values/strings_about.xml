@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_about_section">About</string>
+    <string name="settings_acknowledgements_title">Open-source acknowledgements</string>
+    <string name="settings_acknowledgements_subtitle">Licences, credits and source code</string>
+    <string name="about_ack_intro">Sukoon is free software, released under the GNU General Public License v3.0. It is a derivative of Fokus Launcher.</string>
+    <string name="about_ack_section_upstream">Upstream project</string>
+    <string name="about_ack_fokus_title">Fokus Launcher</string>
+    <string name="about_ack_fokus_body">Sukoon is built on Fokus Launcher by Paul Scheduikat and contributors. Licence: GPL-3.0. Upstream copyright notices and history are preserved.</string>
+    <string name="about_ack_section_reference">Reference and inspiration</string>
+    <string name="about_ack_victoria_title">Victoria Launcher</string>
+    <string name="about_ack_victoria_body">Studied as a reference and for inspiration only. Licence: GPL-3.0-or-later. No Victoria Launcher code is included in this version.</string>
+    <string name="about_ack_section_libraries">Libraries and assets</string>
+    <string name="about_ack_androidx_title">AndroidX, Jetpack Compose, Room, DataStore, Navigation</string>
+    <string name="about_ack_androidx_body">Google and the Android Open Source Project. Licence: Apache-2.0.</string>
+    <string name="about_ack_material_title">Material Components for Android</string>
+    <string name="about_ack_material_body">Google. Licence: Apache-2.0.</string>
+    <string name="about_ack_symbols_title">Material Symbols and Material icons</string>
+    <string name="about_ack_symbols_body">Google. Licence: Apache-2.0. Used for interface and weather icons.</string>
+    <string name="about_ack_hilt_title">Hilt and Dagger</string>
+    <string name="about_ack_hilt_body">Google. Licence: Apache-2.0.</string>
+    <string name="about_ack_kotlin_title">Kotlin and kotlinx.coroutines</string>
+    <string name="about_ack_kotlin_body">JetBrains and contributors. Licence: Apache-2.0.</string>
+    <string name="about_ack_openmeteo_title">Open-Meteo</string>
+    <string name="about_ack_openmeteo_body">Weather, geocoding and air-quality data. Data licence: CC BY 4.0. Only used if you enable weather.</string>
+    <string name="about_ack_arcticons_title">Arcticons (optional)</string>
+    <string name="about_ack_arcticons_body">A separate icon-pack app you can install yourself. It is not bundled with Sukoon.</string>
+    <string name="about_ack_section_source">Source code and licence</string>
+    <string name="about_ack_source_title">Sukoon source code</string>
+    <string name="about_ack_source_body">The complete corresponding source is available at github.com/HaronKhalid/Sukoon.</string>
+    <string name="about_ack_view_gpl">View full GPL-3.0 text</string>
+    <string name="about_ack_gpl_title">GNU GPL v3.0</string>
+    <string name="about_ack_gpl_load_failed">The licence text could not be loaded. It is also available at https://www.gnu.org/licenses/gpl-3.0.txt</string>
+    <string name="about_ack_warranty">Sukoon comes with ABSOLUTELY NO WARRANTY, to the extent permitted by law.</string>
+</resources>

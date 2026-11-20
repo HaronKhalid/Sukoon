@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_layout_studio">Layout and Clock Studio</string>
+    <string name="settings_layout_studio_subtitle">Presets, element order, visibility and clock style</string>
+    <string name="layout_studio_title">Home layout</string>
+    <string name="layout_studio_presets">Presets</string>
+    <string name="layout_studio_presets_subtitle">A preset is a starting point. Every element stays customisable.</string>
+    <string name="layout_studio_current_preset">Current: %1$s</string>
+    <string name="layout_studio_elements">Elements</string>
+    <string name="layout_studio_alignment">Alignment</string>
+    <string name="layout_studio_size">Size</string>
+    <string name="layout_studio_spacing">Spacing</string>
+    <string name="layout_studio_move_up">Move up</string>
+    <string name="layout_studio_move_down">Move down</string>
+    <string name="layout_studio_not_rendered">Not shown on the home screen yet</string>
+    <string name="layout_studio_order_note">Order is saved; the home screen keeps its fixed section order for now.</string>
+    <string name="layout_studio_open_clock">Clock Studio</string>
+    <string name="layout_studio_reset">Reset to default layout</string>
+    <string name="clock_studio_title">Clock Studio</string>
+    <string name="clock_studio_style">Clock style</string>
+    <string name="clock_studio_hour_format">Hour format</string>
+    <string name="clock_studio_show_seconds">Show seconds</string>
+    <string name="clock_studio_show_seconds_subtitle">Updates every second. Off saves battery.</string>
+    <string name="clock_studio_font_size">Font size: %1$s</string>
+    <string name="clock_studio_font_size_theme">theme default</string>
+    <string name="clock_studio_font_weight">Font weight</string>
+    <string name="clock_studio_letter_spacing">Letter spacing: %1$.1f</string>
+    <string name="clock_studio_line_height">Line height: %1$.2f</string>
+    <string name="clock_studio_color">Colour</string>
+    <string name="clock_studio_color_theme">Theme</string>
+    <string name="clock_studio_color_white">White</string>
+    <string name="clock_studio_color_amber">Amber</string>
+    <string name="clock_studio_color_mint">Mint</string>
+    <string name="clock_studio_color_sky">Sky</string>
+    <string name="clock_studio_alignment">Clock alignment</string>
+    <string name="clock_studio_show_date">Show date</string>
+    <string name="clock_studio_date_format">Date format</string>
+    <string name="clock_studio_reset">Reset clock to default</string>
+    <string name="clock_studio_preview">Preview</string>
+</resources>

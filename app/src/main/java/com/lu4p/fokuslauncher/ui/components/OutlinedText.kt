@@ -1,0 +1,129 @@
+package com.lu4p.fokuslauncher.ui.components
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import com.lu4p.fokuslauncher.ui.theme.LocalPhotoWallpaperOutlineWidthDp
+
+@Composable
+fun OutlinedText(
+        text: String,
+        style: TextStyle,
+        color: Color = LocalContentColor.current,
+        modifier: Modifier = Modifier,
+        outlineColor: Color = Color.Black,
+        outlineWidth: Float = 2f,
+        maxLines: Int = Int.MAX_VALUE,
+        overflow: TextOverflow = TextOverflow.Clip,
+        textAlign: TextAlign = TextAlign.Unspecified,
+) {
+    OutlinedText(
+            text = AnnotatedString(text),
+            style = style,
+            color = color,
+            modifier = modifier,
+            outlineColor = outlineColor,
+            outlineWidth = outlineWidth,
+            maxLines = maxLines,
+            overflow = overflow,
+            textAlign = textAlign,
+    )
+}
+
+/**
+ * Styled variant. The outline pass reuses [text], so its spans must not set a color: a span color
+ * would override [outlineColor] and the outline would disappear.
+ *
+ * [onTextLayout] reports the visible (front) text. With a photo backdrop that text is centered
+ * inside the padded pill, so callers mapping pointer positions must offset by the size difference.
+ */
+@Composable
+fun OutlinedText(
+        text: AnnotatedString,
+        style: TextStyle,
+        color: Color = LocalContentColor.current,
+        modifier: Modifier = Modifier,
+        outlineColor: Color = Color.Black,
+        outlineWidth: Float = 2f,
+        maxLines: Int = Int.MAX_VALUE,
+        overflow: TextOverflow = TextOverflow.Clip,
+        textAlign: TextAlign = TextAlign.Unspecified,
+        onTextLayout: (TextLayoutResult) -> Unit = {},
+        pillShape: Shape = RoundedCornerShape(50),
+) {
+    val outlineWidthDpSetting = LocalPhotoWallpaperOutlineWidthDp.current
+    if (outlineWidthDpSetting > 0f) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Text(
+                    text = text,
+                    style = style,
+                    color = Color.Transparent,
+                    maxLines = maxLines,
+                    overflow = overflow,
+                    textAlign = textAlign,
+                    modifier =
+                            Modifier.photoBackdropPill(outlineWidthDpSetting, shape = pillShape)
+                                    .clearAndSetSemantics {},
+            )
+            Text(
+                    text = text,
+                    style = style,
+                    color = color,
+                    maxLines = maxLines,
+                    overflow = overflow,
+                    textAlign = textAlign,
+                    onTextLayout = onTextLayout,
+                    // Same constraints as the pill, so both lay out the same lines in limited space.
+                    modifier = Modifier.photoBackdropPillPadding(outlineWidthDpSetting),
+            )
+        }
+        return
+    }
+
+    val effectiveOutlineWidth =
+            remember(outlineWidth) { outlineWidth }
+    Box(modifier = modifier) {
+        Text(
+                text = text,
+                style =
+                        style.copy(
+                                drawStyle =
+                                        Stroke(
+                                                width = effectiveOutlineWidth,
+                                                cap = StrokeCap.Round,
+                                                join = StrokeJoin.Round,
+                                        )
+                        ),
+                color = outlineColor,
+                maxLines = maxLines,
+                overflow = overflow,
+                    textAlign = textAlign,
+                modifier = Modifier.clearAndSetSemantics {},
+        )
+        Text(
+                text = text,
+                style = style,
+                color = color,
+                maxLines = maxLines,
+                overflow = overflow,
+                    textAlign = textAlign,
+                onTextLayout = onTextLayout,
+        )
+    }
+}
