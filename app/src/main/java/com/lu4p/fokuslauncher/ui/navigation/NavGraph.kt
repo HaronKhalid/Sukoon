@@ -840,6 +840,9 @@ fun FokusNavGraph(
                     onOpenBatterySettings = {
                         navController.navigateSingleTop(Routes.SETTINGS_BATTERY)
                     },
+                    onOpenFocusSettings = {
+                        navController.navigateSingleTop(Routes.SETTINGS_FOCUS)
+                    },
                     backgroundScrim = com.lu4p.fokuslauncher.theme.themedSettingsScrim
                 )
             }
