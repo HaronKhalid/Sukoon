@@ -13,7 +13,7 @@
     <string name="layout_studio_move_up">Move up</string>
     <string name="layout_studio_move_down">Move down</string>
     <string name="layout_studio_not_rendered">Not shown on the home screen yet</string>
-    <string name="layout_studio_order_note">Order is saved; the home screen keeps its fixed section order for now.</string>
+    <string name="layout_studio_order_note">The home screen follows this order. Favourites always stay at the bottom.</string>
     <string name="layout_studio_open_clock">Clock Studio</string>
     <string name="layout_studio_reset">Reset to default layout</string>
     <string name="clock_studio_title">Clock Studio</string>
@@ -37,4 +37,7 @@
     <string name="clock_studio_date_format">Date format</string>
     <string name="clock_studio_reset">Reset clock to default</string>
     <string name="clock_studio_preview">Preview</string>
+    <string name="home_search_apps">Search apps</string>
+    <string name="home_focus_running">Focus: %1$s</string>
+    <string name="home_focus_idle">Start a focus session</string>
 </resources>

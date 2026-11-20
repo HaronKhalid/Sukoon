@@ -73,3 +73,9 @@ Added package `home/layout` (model, presets, codec, repository, ViewModel, `Conf
 |---|---|
 | `JAVA_HOME=C:\Android\jdk21\jdk-21.0.13+9 ./gradlew testDebugUnitTest --tests "com.lu4p.fokuslauncher.home.layout.*" --console=plain` | First runs failed to compile (enum entries used as expression; fixed with star import). A real file-backed DataStore test failed on Windows (`Unable to rename ... .tmp`), so the persistence test uses an in-memory DataStore. Final run: **BUILD SUCCESSFUL**, 9 tests in `HomeLayoutTest` |
 | `./gradlew assembleDebug testDebugUnitTest --tests "com.lu4p.fokuslauncher.ConfigurationBackupTest" --tests "com.lu4p.fokuslauncher.home.layout.*"` | **BUILD SUCCESSFUL** (3m25s); APK assembled, backup and layout tests passed. Full `testDebugUnitTest` suite not re-run. No on-device/UI verification. |
+
+## 2026-11-20 - Home screen applies the layout config
+- `HomeWidgetsSection` draws clock, date/battery, spacer, app search, focus status and notes in the saved order. Favourites stay anchored at the bottom (`HomeContentLayout`'s note-beside-rail logic depends on it).
+- Size scales text through `LocalDensity.fontScale`; spacing is relative to NORMAL (`layoutPadDp`), so the default config keeps the original paddings. Alignment applies to date, app search and focus status only.
+- New elements: app search (opens the drawer via `onOpenDrawer`) and focus status (shows/starts/pauses the Pomodoro session).
+- Verified: `./gradlew assembleDebug testDebugUnitTest --tests "com.lu4p.fokuslauncher.home.layout.*"` BUILD SUCCESSFUL; `LayoutSpacingTest` 5/5. Not verified: appearance on a device, full unit-test suite, lint.

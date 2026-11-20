@@ -115,7 +115,8 @@ fun LayoutStudioScreen(
 @Composable
 private fun ElementEditor(layout: HomeLayoutConfig, type: HomeElementType, vm: HomeLayoutViewModel) {
     val e = layout.element(type)
-    val rendered = type != HomeElementType.APP_SEARCH && type != HomeElementType.FOCUS_STATUS
+    // Every element is drawn on the home screen now (favourites stay anchored at the bottom).
+    val rendered = true
     Column(Modifier.testTag("layout_element_${type.name}")) {
         SettingsToggleRow(
                 label = type.pretty(),

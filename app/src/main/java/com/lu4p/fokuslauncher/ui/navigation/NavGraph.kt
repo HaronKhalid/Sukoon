@@ -716,6 +716,7 @@ fun FokusNavGraph(
                                 onOpenEditShortcuts = {
                                     navController.navigateSingleTop(Routes.SETTINGS_EDIT_SHORTCUTS)
                                 },
+                                onOpenDrawer = { showDrawer = true },
                                 modifier = Modifier.fillMaxSize()
                             )
                         }

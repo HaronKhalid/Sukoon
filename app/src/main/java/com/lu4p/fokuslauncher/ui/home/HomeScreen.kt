@@ -14,6 +14,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import com.lu4p.fokuslauncher.home.layout.ElementSpacing
+import com.lu4p.fokuslauncher.home.layout.layoutPadDp
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -119,6 +124,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit = {},
     onOpenEditHomeApps: () -> Unit = {},
     onOpenEditShortcuts: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {},
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -232,6 +238,7 @@ fun HomeScreen(
             onPomodoroSelectMode = viewModel::pomodoroSelectMode,
             doubleTapEmptyEnabled = uiState.doubleTapEmptyActionEnabled,
             onDoubleTapEmpty = onDoubleTapEmpty,
+            onOpenDrawer = onOpenDrawer,
         )
         }
     }
@@ -344,6 +351,7 @@ fun HomeScreenContent(
     onPomodoroSelectMode: (PomodoroMode) -> Unit = {},
     doubleTapEmptyEnabled: Boolean = false,
     onDoubleTapEmpty: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {},
 ) {
     val play = LocalSystemClickSound.current
     val noIndication = remember { MutableInteractionSource() }
@@ -404,13 +412,16 @@ fun HomeScreenContent(
                     onPomodoroDecrease = onPomodoroDecrease,
                     onPomodoroIncrease = onPomodoroIncrease,
                     onPomodoroSelectMode = onPomodoroSelectMode,
+                    onOpenDrawer = onOpenDrawer,
                     outlined = uiState.usesPhotoWallpaper,
                 )
 
                 Spacer(modifier = Modifier.layoutId(HomeContentSlot.Gap))
 
                 Box(modifier = Modifier.fillMaxWidth().layoutId(HomeContentSlot.Favorites)) {
-                    if (LocalHomeLayout.current.layout.isVisible(HomeElementType.FAVOURITES))
+                    val favouritesLayout = LocalHomeLayout.current.layout
+                    if (favouritesLayout.isVisible(HomeElementType.FAVOURITES))
+                    ScaledText(favouritesLayout.element(HomeElementType.FAVOURITES).size.scale) {
                     HomeFavoritesSection(
                         homeAlignment = uiState.homeAlignment,
                         homeAppIconMode = uiState.homeAppIconMode,
@@ -425,6 +436,7 @@ fun HomeScreenContent(
                         onLabelLongPress = onLabelLongPress,
                         onIconClick = onIconClick
                     )
+                    }
                 }
 
                 if (uiState.homeAlignment == HomeAlignment.MIDDLE) {
@@ -585,6 +597,7 @@ private fun HomeWidgetsSection(
     onPomodoroDecrease: () -> Unit,
     onPomodoroIncrease: () -> Unit,
     onPomodoroSelectMode: (PomodoroMode) -> Unit,
+    onOpenDrawer: () -> Unit,
     outlined: Boolean,
 ) {
     val homeLayout = LocalHomeLayout.current
@@ -596,80 +609,6 @@ private fun HomeWidgetsSection(
     val showBatteryLine = uiState.showHomeBattery && layoutConfig.isVisible(HomeElementType.BATTERY)
     val showDateOrBattery = showDateLine || showBatteryLine
     val widgetAlignment = HomeWidgetAlignment.from(uiState.homeAlignment)
-
-    when {
-        showClock -> {
-            HomeClockWeatherHeader(
-                clockUiState = clockUiState,
-                weatherUiState = weatherUiState,
-                screenTimeUiState = screenTimeUiState,
-                showWeather = showWeather,
-                onClockClick = onClockClick,
-                onWeatherClick = onWeatherClick,
-                onScreenTimeClick = onScreenTimeClick,
-                outlined = outlined,
-            )
-        }
-        showWeather || screenTimeUiState.showWidget -> {
-            Column(
-                horizontalAlignment = Alignment.End,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (showWeather) {
-                    WeatherWidget(
-                        weather = weatherUiState.weather,
-                        useFahrenheit = weatherUiState.weatherUseFahrenheit,
-                        prominent = false,
-                        outlined = outlined,
-                        onClick = onWeatherClick,
-                    )
-                }
-                if (screenTimeUiState.showWidget) {
-                    ScreenTimeWidget(
-                        durationText = screenTimeUiState.durationText.orEmpty(),
-                        outlined = outlined,
-                        onClick = onScreenTimeClick,
-                        modifier =
-                            Modifier.padding(top = if (showWeather) 4.dp else 0.dp),
-                    )
-                }
-            }
-        }
-    }
-
-    if (showDateOrBattery) {
-        DateBatteryRow(
-            date = configuredDate(clockUiState.currentDate, homeLayout.clock.dateStyle),
-            batteryPercent = clockUiState.batteryPercent,
-            isCharging = clockUiState.isCharging,
-            showDate = showDateLine,
-            showBattery = showBatteryLine,
-            alignment = when (layoutConfig.element(HomeElementType.DATE).alignment) {
-                ElementAlignment.START -> HomeWidgetAlignment.START
-                ElementAlignment.CENTER -> HomeWidgetAlignment.CENTER
-                ElementAlignment.END -> HomeWidgetAlignment.END
-            },
-            outlined = outlined,
-            onDateClick = onDateClick,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(top = if (showClock) 8.dp else 0.dp)
-                    .testTag("date_battery_row"),
-        )
-    }
-
-    if (layoutConfig.isVisible(HomeElementType.SPACER)) {
-        Spacer(Modifier.height((32 * layoutConfig.element(HomeElementType.SPACER).size.scale).dp))
-    }
-
-    val belowHeaderTopPad =
-        if (showDateOrBattery || showClock || showWeather || screenTimeUiState.showWidget) {
-            8.dp
-        } else {
-            0.dp
-        }
-    // A bit of air under the date line so extras don't sit flush against it.
-    val extrasTopPad = if (showDateOrBattery) 8.dp else belowHeaderTopPad
 
     val extraChips =
         remember(homeExtraWidgets, worldClockUiState, countdownUiState) {
@@ -695,41 +634,161 @@ private fun HomeWidgetsSection(
                 }
             }
         }
-    val mediaOrPomodoroTopPad = 16.dp
-    val noteTopPad =
-        if (extraChips.isNotEmpty()) {
-            HomeExtraChipsRow(
-                chips = extraChips,
-                outlined = outlined,
-                modifier = Modifier.fillMaxWidth().padding(top = extrasTopPad),
-            )
-            mediaOrPomodoroTopPad
-        } else if (belowHeaderTopPad > 0.dp) {
-            mediaOrPomodoroTopPad
-        } else {
-            0.dp
-        }
 
-    val nextTopPad =
-        if (noteUiState.showWidget && layoutConfig.isVisible(HomeElementType.NOTES)) {
-            HomePinnedNoteOr(
-                modifier = Modifier.fillMaxWidth().layoutId(HomeContentSlot.Note)
-                    .padding(top = noteTopPad),
-            ) {
-                NoteWidget(
-                    text = noteUiState.text,
-                    alignment = widgetAlignment,
-                    outlined = outlined,
-                    onClick = onNoteClick,
-                    onToggleTask = onToggleNoteTask,
-                    modifier = Modifier.fillMaxWidth().layoutId(HomeContentSlot.Note)
-                        .padding(top = noteTopPad),
-                )
+    // Elements are drawn in the saved order. Favourites stay anchored below this block because
+    // HomeContentLayout's note-beside-rail logic depends on that. Spacing and size are relative to
+    // the defaults, so the default configuration reproduces the original home screen exactly.
+    var rendered = false
+    var lastWasWeatherOnly = false
+    var dateBatteryDone = false
+    var chipsDone = false
+    layoutConfig.ordered().forEach { element ->
+        when (element.type) {
+            HomeElementType.CLOCK -> {
+                if (showClock) {
+                    HomeClockWeatherHeader(
+                        clockUiState = clockUiState,
+                        weatherUiState = weatherUiState,
+                        screenTimeUiState = screenTimeUiState,
+                        showWeather = showWeather,
+                        onClockClick = onClockClick,
+                        onWeatherClick = onWeatherClick,
+                        onScreenTimeClick = onScreenTimeClick,
+                        outlined = outlined,
+                    )
+                    rendered = true
+                    lastWasWeatherOnly = false
+                } else if (showWeather || screenTimeUiState.showWidget) {
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (showWeather) {
+                            WeatherWidget(
+                                weather = weatherUiState.weather,
+                                useFahrenheit = weatherUiState.weatherUseFahrenheit,
+                                prominent = false,
+                                outlined = outlined,
+                                onClick = onWeatherClick,
+                            )
+                        }
+                        if (screenTimeUiState.showWidget) {
+                            ScreenTimeWidget(
+                                durationText = screenTimeUiState.durationText.orEmpty(),
+                                outlined = outlined,
+                                onClick = onScreenTimeClick,
+                                modifier =
+                                    Modifier.padding(top = if (showWeather) 4.dp else 0.dp),
+                            )
+                        }
+                    }
+                    rendered = true
+                    lastWasWeatherOnly = true
+                }
             }
-            mediaOrPomodoroTopPad
-        } else {
-            noteTopPad
+            HomeElementType.DATE, HomeElementType.BATTERY -> {
+                if (!dateBatteryDone && showDateOrBattery) {
+                    dateBatteryDone = true
+                    val el = layoutConfig.element(
+                        if (showDateLine) HomeElementType.DATE else HomeElementType.BATTERY,
+                    )
+                    ScaledText(el.size.scale) {
+                        DateBatteryRow(
+                            date = configuredDate(clockUiState.currentDate, homeLayout.clock.dateStyle),
+                            batteryPercent = clockUiState.batteryPercent,
+                            isCharging = clockUiState.isCharging,
+                            showDate = showDateLine,
+                            showBattery = showBatteryLine,
+                            alignment = el.alignment.toWidgetAlignment(),
+                            outlined = outlined,
+                            onDateClick = onDateClick,
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .padding(
+                                        top = layoutPad(
+                                            8, el.spacing, rendered && !lastWasWeatherOnly,
+                                        ),
+                                    )
+                                    .testTag("date_battery_row"),
+                        )
+                    }
+                    rendered = true
+                    lastWasWeatherOnly = false
+                }
+            }
+            HomeElementType.SPACER -> {
+                if (element.visible) {
+                    Spacer(Modifier.height((32 * element.size.scale).dp))
+                }
+            }
+            HomeElementType.APP_SEARCH -> {
+                if (element.visible) {
+                    ScaledText(element.size.scale) {
+                        HomeSearchEntry(
+                            alignment = element.alignment.toWidgetAlignment(),
+                            onClick = onOpenDrawer,
+                            modifier = Modifier.padding(top = layoutPad(12, element.spacing, rendered)),
+                        )
+                    }
+                    rendered = true
+                    lastWasWeatherOnly = false
+                }
+            }
+            HomeElementType.FOCUS_STATUS -> {
+                if (element.visible) {
+                    ScaledText(element.size.scale) {
+                        HomeFocusStatus(
+                            running = pomodoroUiState.isRunning,
+                            remainingText = pomodoroUiState.remainingText,
+                            alignment = element.alignment.toWidgetAlignment(),
+                            onClick = onPomodoroPlayPause,
+                            modifier = Modifier.padding(top = layoutPad(12, element.spacing, rendered)),
+                        )
+                    }
+                    rendered = true
+                    lastWasWeatherOnly = false
+                }
+            }
+            HomeElementType.NOTES -> {
+                if (!chipsDone) {
+                    chipsDone = true
+                    if (extraChips.isNotEmpty()) {
+                        HomeExtraChipsRow(
+                            chips = extraChips,
+                            outlined = outlined,
+                            modifier = Modifier.fillMaxWidth()
+                                .padding(top = layoutPad(8, element.spacing, rendered)),
+                        )
+                        rendered = true
+                        lastWasWeatherOnly = false
+                    }
+                }
+                if (noteUiState.showWidget && element.visible) {
+                    val noteTop = layoutPad(16, element.spacing, rendered)
+                    ScaledText(element.size.scale) {
+                        HomePinnedNoteOr(
+                            modifier = Modifier.fillMaxWidth().layoutId(HomeContentSlot.Note)
+                                .padding(top = noteTop),
+                        ) {
+                            NoteWidget(
+                                text = noteUiState.text,
+                                alignment = widgetAlignment,
+                                outlined = outlined,
+                                onClick = onNoteClick,
+                                onToggleTask = onToggleNoteTask,
+                                modifier = Modifier.fillMaxWidth().layoutId(HomeContentSlot.Note)
+                                    .padding(top = noteTop),
+                            )
+                        }
+                    }
+                    rendered = true
+                    lastWasWeatherOnly = false
+                }
+            }
+            HomeElementType.FAVOURITES -> Unit // Anchored below; see HomeScreenContent.
         }
+    }
+    val nextTopPad = if (rendered) 16.dp else 0.dp
 
     when {
         pomodoroUiState.showWidget -> {
@@ -1182,6 +1241,92 @@ private fun HomeScreenLongPressSheet(
             onClick = onOpenSettings,
             icon = Icons.Default.Settings,
             iconContentDescription = stringResource(R.string.cd_settings),
+        )
+    }
+}
+
+/** Scales every sp-based text size inside [content]; 1f leaves it untouched. */
+@Composable
+private fun ScaledText(scale: Float, content: @Composable () -> Unit) {
+    if (scale == 1f) {
+        content()
+    } else {
+        val density = LocalDensity.current
+        CompositionLocalProvider(
+            LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * scale),
+            content = content,
+        )
+    }
+}
+
+private fun layoutPad(base: Int, spacing: ElementSpacing, hasAbove: Boolean): Dp =
+    layoutPadDp(base, spacing, hasAbove).dp
+
+private fun ElementAlignment.toWidgetAlignment(): HomeWidgetAlignment =
+    when (this) {
+        ElementAlignment.START -> HomeWidgetAlignment.START
+        ElementAlignment.CENTER -> HomeWidgetAlignment.CENTER
+        ElementAlignment.END -> HomeWidgetAlignment.END
+    }
+
+private fun HomeWidgetAlignment.toArrangement(): Arrangement.Horizontal =
+    when (this) {
+        HomeWidgetAlignment.START -> Arrangement.Start
+        HomeWidgetAlignment.CENTER -> Arrangement.Center
+        HomeWidgetAlignment.END -> Arrangement.End
+    }
+
+/** Optional "search apps" entry; tapping opens the app drawer. */
+@Composable
+private fun HomeSearchEntry(
+    alignment: HomeWidgetAlignment,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val color = MaterialTheme.colorScheme.onBackground
+    val shape = RoundedCornerShape(24.dp)
+    Row(
+        modifier = modifier.fillMaxWidth().testTag("home_search_entry"),
+        horizontalArrangement = alignment.toArrangement(),
+    ) {
+        Text(
+            text = stringResource(R.string.home_search_apps),
+            style = MaterialTheme.typography.bodyLarge,
+            color = color.copy(alpha = 0.7f),
+            modifier = Modifier
+                .clip(shape)
+                .border(1.dp, color.copy(alpha = 0.3f), shape)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        )
+    }
+}
+
+/** Optional focus status: shows the running focus (Pomodoro) session; tapping starts or pauses it. */
+@Composable
+private fun HomeFocusStatus(
+    running: Boolean,
+    remainingText: String,
+    alignment: HomeWidgetAlignment,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val color = MaterialTheme.colorScheme.onBackground
+    Row(
+        modifier = modifier.fillMaxWidth().testTag("home_focus_status"),
+        horizontalArrangement = alignment.toArrangement(),
+    ) {
+        Text(
+            text = if (running) {
+                stringResource(R.string.home_focus_running, remainingText)
+            } else {
+                stringResource(R.string.home_focus_idle)
+            },
+            style = MaterialTheme.typography.bodyLarge,
+            color = color.copy(alpha = if (running) 1f else 0.7f),
+            modifier = Modifier
+                .clickable(onClick = onClick)
+                .padding(vertical = 6.dp),
         )
     }
 }
