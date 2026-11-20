@@ -292,9 +292,13 @@ class HomeViewModel @Inject constructor(
         rawFavorites,
         _renameMap,
         _appNameMap,
-        _archivedAppKeys
-    ) { favs, renames, appNames, archivedKeys ->
-        resolveFavoritesSnapshot(favs, renames, appNames, archivedKeys)
+        _archivedAppKeys,
+        com.lu4p.fokuslauncher.focus.FocusVisibility.allowed
+    ) { favs, renames, appNames, archivedKeys, focusAllowed ->
+        com.lu4p.fokuslauncher.focus.filterForFocus(
+            resolveFavoritesSnapshot(favs, renames, appNames, archivedKeys),
+            focusAllowed
+        ) { drawerOpenCountKey(it.packageName, it.profileKey) }
     }.stateWhileSubscribedIn(viewModelScope, emptyList())
 
     // ── Dialog state ────────────────────────────────────────────────

@@ -131,6 +131,7 @@ object Routes {
     const val SETTINGS_APPS_MANAGEMENT = "settings_apps_management"
     const val SETTINGS_NOTES = "settings_notes"
     const val SETTINGS_TYPOGRAPHY = "settings_typography"
+    const val SETTINGS_FOCUS = "settings_focus"
 
     fun iconPickerShortcut(index: Int): String = "settings_icon_picker/shortcut/$index"
 
@@ -864,6 +865,13 @@ fun FokusNavGraph(
 
             fokusSettingsComposable(Routes.SETTINGS_NOTES) {
                 NotesScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        backgroundScrim = Color.Black,
+                )
+            }
+
+            fokusSettingsComposable(Routes.SETTINGS_FOCUS) {
+                com.lu4p.fokuslauncher.focus.FocusSettingsScreen(
                         onNavigateBack = { navController.popBackStack() },
                         backgroundScrim = Color.Black,
                 )

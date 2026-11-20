@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="focus_title">Focus</string>
+    <string name="focus_settings_subtitle">Profiles that show only the apps you choose</string>
+    <string name="focus_honest_notice">Hiding apps here only hides them in this launcher; it does not block them elsewhere in Android.</string>
+    <string name="focus_enabled">Focus mode</string>
+    <string name="focus_off_subtitle">Off. Everything is shown as normal.</string>
+    <string name="focus_active_profile">Active profile: %1$s</string>
+    <string name="focus_section_profiles">PROFILES</string>
+    <string name="focus_profile_active">Active</string>
+    <string name="focus_profile_editing">Editing</string>
+    <string name="focus_section_edit">EDIT %1$s</string>
+    <string name="focus_activate">Activate this profile</string>
+    <string name="focus_field_name">Name</string>
+    <string name="focus_field_reminder">Reminder text (optional)</string>
+    <string name="focus_choose_apps">Visible apps</string>
+    <string name="focus_apps_all">None chosen: all apps stay visible</string>
+    <string name="focus_apps_count">%1$d apps</string>
+    <string name="focus_apps_hint">Only ticked apps appear in the drawer and on the home screen while this profile is active.</string>
+    <string name="focus_layout">Home layout preset</string>
+    <string name="focus_theme">Theme</string>
+    <string name="focus_unchanged">Leave unchanged</string>
+    <string name="focus_session_length">Session length</string>
+    <string name="focus_minutes">%1$d minutes</string>
+    <string name="focus_schedule">Schedule</string>
+    <string name="focus_schedule_hint">Checked when Sukoon opens. Nothing runs in the background.</string>
+    <string name="focus_start_time">Start time</string>
+    <string name="focus_end_time">End time</string>
+    <string name="focus_tap_step">(tap to add 30 minutes)</string>
+    <string name="focus_section_session">FOCUS SESSION</string>
+    <string name="focus_session_idle">Ready</string>
+    <string name="focus_session_start">Start</string>
+    <string name="focus_session_pause">Pause</string>
+    <string name="focus_session_resume">Resume</string>
+    <string name="focus_session_end">End</string>
+    <string name="focus_session_note">Sessions use the Pomodoro timer and turn on its home widget.</string>
+</resources>

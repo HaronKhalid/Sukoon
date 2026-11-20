@@ -65,6 +65,7 @@ fun SettingsScreen(
         onOpenThemeStudio: () -> Unit = {},
         onOpenNotesSettings: () -> Unit = {},
         onOpenTypographySettings: () -> Unit = {},
+        onOpenFocusSettings: () -> Unit = {},
         backgroundScrim: Color = FokusBackdrop.ScrimColorWithoutBlur,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -103,6 +104,7 @@ fun SettingsScreen(
                 onOpenThemeStudio = onOpenThemeStudio,
                 onOpenNotesSettings = onOpenNotesSettings,
                 onOpenTypographySettings = onOpenTypographySettings,
+                onOpenFocusSettings = onOpenFocusSettings,
                 onShowResetConfirm = { showResetConfirm.value = true },
         )
     }
@@ -136,6 +138,7 @@ private fun SettingsHubContent(
         onOpenThemeStudio: () -> Unit,
         onOpenNotesSettings: () -> Unit,
         onOpenTypographySettings: () -> Unit,
+        onOpenFocusSettings: () -> Unit,
         onShowResetConfirm: () -> Unit,
 ) {
     val homeScreenSubpageRows =
@@ -246,6 +249,15 @@ private fun SettingsHubContent(
                     subtitle = stringResource(R.string.typography_settings_subtitle),
                     verticalPadding = 14.dp,
                     onClick = onOpenTypographySettings,
+                    trailing = { SubpageChevron() },
+            )
+        }
+        item {
+            SettingsRow(
+                    label = stringResource(R.string.focus_title),
+                    subtitle = stringResource(R.string.focus_settings_subtitle),
+                    verticalPadding = 14.dp,
+                    onClick = onOpenFocusSettings,
                     trailing = { SubpageChevron() },
             )
         }

@@ -79,3 +79,11 @@ Added package `home/layout` (model, presets, codec, repository, ViewModel, `Conf
 - Size scales text through `LocalDensity.fontScale`; spacing is relative to NORMAL (`layoutPadDp`), so the default config keeps the original paddings. Alignment applies to date, app search and focus status only.
 - New elements: app search (opens the drawer via `onOpenDrawer`) and focus status (shows/starts/pauses the Pomodoro session).
 - Verified: `./gradlew assembleDebug testDebugUnitTest --tests "com.lu4p.fokuslauncher.home.layout.*"` BUILD SUCCESSFUL; `LayoutSpacingTest` 5/5. Not verified: appearance on a device, full unit-test suite, lint.
+
+## Milestone 5: focus profiles (branch feat/focus-profiles)
+- New package `focus`: `FocusModel` (profiles Study/Work/Personal/Sleep/Custom, schedule with overnight ranges, pure `filterForFocus` and `resolveOnResume`), `FocusCodec` (versioned JSON on the theme package's strict `MiniJson`, fails safe to defaults), `FocusController` (DataStore persistence, activation, session wrapper over `PomodoroRepository`), `FocusSettingsScreen`.
+- Visibility hook: `FocusVisibility.allowed` (process-wide StateFlow of `profile|package` keys, null = off). `AppDrawerViewModel.rebuildVisibleApps` and `HomeViewModel.favorites` filter through it; an empty app set means no filtering so the user cannot lock themselves out.
+- Layout preset and theme are applied through `HomeLayoutRepository`/`ThemeStore`; the prior values are snapshotted and restored exactly on disable.
+- Schedules are evaluated only in `MainActivity.onResume` (no service, no alarms). A user switch-off is respected until the schedule window ends.
+- UI: Settings > Focus, with the notice that hiding only affects this launcher. Strings are in `strings_focus.xml`.
+- Not done: focus keys are not in configuration backups; times are stepped in 30-minute taps (no time picker); private-space drawer apps are not filtered.

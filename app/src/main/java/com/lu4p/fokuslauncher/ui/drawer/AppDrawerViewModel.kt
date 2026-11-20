@@ -319,6 +319,7 @@ constructor(
 
     init {
         observeHiddenAndRenamed()
+        observeFocusVisibility()
         observeInstalledApps()
         observeDrawerShortcuts()
         observeRemovedPackages()
@@ -783,6 +784,22 @@ constructor(
         }
     }
 
+    private fun observeFocusVisibility() {
+        viewModelScope.launch {
+            com.lu4p.fokuslauncher.focus.FocusVisibility.allowed.drop(1).collect {
+                rebuildVisibleApps(
+                        DrawerMetadataSnapshot(
+                                latestHiddenApps,
+                                latestRenamedApps,
+                                latestCategoryEntities,
+                                latestDefinedCategories,
+                                latestSuppressedCategories,
+                        )
+                )
+            }
+        }
+    }
+
     private fun observeInstalledApps() {
         viewModelScope.launch {
             appRepository.getInstalledAppsVersion().drop(1).collect {
@@ -884,27 +901,34 @@ constructor(
             pruneOptimisticallyRemovedKeys(base, rawPrivateApps)
             val removedSnapshot =
                     synchronized(optimisticallyRemovedKeys) { optimisticallyRemovedKeys.toSet() }
+            val focusAllowed = com.lu4p.fokuslauncher.focus.FocusVisibility.allowed.value
             val visible =
-                    applyMetadataOverlays(
+                    com.lu4p.fokuslauncher.focus.filterForFocus(
+                                    applyMetadataOverlays(
                                     apps = base,
                                     hiddenApps = metadata.hiddenApps,
                                     renamedApps = metadata.renamedApps,
                                     categoryEntities = metadata.categoryEntities,
                                     suppressedCategories = metadata.suppressedCategories.toSet(),
-                            )
+                            ),
+                                    focusAllowed,
+                            ) { drawerOpenCountKey(it.packageName, it.userHandle) }
                             .filterNot { app ->
                                 drawerOpenCountKey(app.packageName, app.userHandle) in
                                         removedSnapshot
                             }
             latestSearchableApps =
-                    applyMetadataOverlays(
+                    com.lu4p.fokuslauncher.focus.filterForFocus(
+                                    applyMetadataOverlays(
                                     apps = base,
                                     hiddenApps = metadata.hiddenApps,
                                     renamedApps = metadata.renamedApps,
                                     categoryEntities = metadata.categoryEntities,
                                     suppressedCategories = metadata.suppressedCategories.toSet(),
                                     excludeHidden = false,
-                            )
+                            ),
+                                    focusAllowed,
+                            ) { drawerOpenCountKey(it.packageName, it.userHandle) }
                             .filterNot { app ->
                                 drawerOpenCountKey(app.packageName, app.userHandle) in
                                         removedSnapshot

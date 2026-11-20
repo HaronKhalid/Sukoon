@@ -52,6 +52,9 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var themeStore: com.lu4p.fokuslauncher.theme.ThemeStore
 
+    @Inject
+    lateinit var focusController: com.lu4p.fokuslauncher.focus.FocusController
+
     private val launcherHomeCoordinator: LauncherHomeCoordinatorViewModel by viewModels()
 
     private var shouldShowStatusBar: Boolean = false
@@ -155,6 +158,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        lifecycleScope.launch { focusController.onAppResume() }
         // AOSP can leave ViewRootImpl drawing suppressed after sleep/wake with another app on top.
         window.decorView.removeCallbacks(frozenRendererCheck)
         window.decorView.postDelayed(frozenRendererCheck, FrozenRendererRecovery.CHECK_DELAY_MS)
