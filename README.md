@@ -1,3 +1,5 @@
+﻿<p align="center"><img src="docs/logo.png" width="128" alt="Sukoon logo"></p>
+
 # Sukoon
 
 **Sukoon** (سکون, "calm") is a focus-first, customizable Android launcher by **Haron Khalid**.

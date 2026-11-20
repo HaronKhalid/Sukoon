@@ -39,6 +39,12 @@ jobs:
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --console=plain
 
+      - name: Keep standard APK
+        run: mkdir -p dist && cp app/build/outputs/apk/debug/*.apk dist/sukoon-standard-debug.apk
+
+      - name: Build lite debug APK (no accessibility or notification-listener services)
+        run: ./gradlew :app:assembleDebug -Plite --console=plain && cp app/build/outputs/apk/debug/*.apk dist/sukoon-lite-debug.apk
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -47,9 +53,16 @@ jobs:
           path: app/build/reports/tests/testDebugUnitTest
           if-no-files-found: ignore
 
-      - name: Upload debug APK
+      - name: Upload standard debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: sukoon-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: sukoon-standard-debug-apk
+          path: dist/sukoon-standard-debug.apk
+          if-no-files-found: error
+
+      - name: Upload lite debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sukoon-lite-debug-apk
+          path: dist/sukoon-lite-debug.apk
           if-no-files-found: error

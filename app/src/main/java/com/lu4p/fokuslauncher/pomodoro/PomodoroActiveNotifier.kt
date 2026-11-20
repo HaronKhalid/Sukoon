@@ -1,4 +1,4 @@
-package com.lu4p.fokuslauncher.pomodoro
+﻿package com.lu4p.fokuslauncher.pomodoro
 
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
@@ -51,7 +51,7 @@ constructor(@param:ApplicationContext private val context: Context) {
                 )
         val notification =
                 NotificationCompat.Builder(context, CHANNEL_ID)
-                        .setSmallIcon(R.drawable.ic_launcher_foreground)
+                        .setSmallIcon(R.drawable.ic_launcher_mono)
                         .setContentTitle(title)
                         .setContentText(context.getString(R.string.pomodoro_notification_active_body))
                         .setCategory(NotificationCompat.CATEGORY_PROGRESS)

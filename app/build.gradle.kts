@@ -99,6 +99,10 @@ if (requiresReleaseApkSigning && requiresReleaseBundleSigning && apkAndBundleUse
     )
 }
 
+// -Plite builds a debug APK without the accessibility and notification-listener services, which
+// Google Play Protect may block on sideloaded installs. See app/src/lite/AndroidManifest.xml.
+val liteBuild = providers.gradleProperty("lite").isPresent
+
 android {
     namespace = "com.lu4p.fokuslauncher"
     compileSdk { version = release(37) }
@@ -174,8 +178,12 @@ android {
             }
         }
         getByName("debug") {
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = if (liteBuild) ".lite" else ".debug"
         }
+    }
+
+    if (liteBuild) {
+        sourceSets.getByName("debug").manifest.srcFile("src/lite/AndroidManifest.xml")
     }
 
     buildFeatures { compose = true }

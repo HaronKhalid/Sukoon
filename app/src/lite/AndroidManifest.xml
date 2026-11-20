@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Used only when building with -Plite (see app/build.gradle.kts). Removes the two services that make
+  Google Play Protect block sideloaded installs on some phones:
+    - the accessibility service (double-tap-to-lock), and
+    - the notification listener (media widget and notification dots).
+  The rest of the launcher is unchanged.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <service
+            android:name=".accessibility.LockScreenAccessibilityService"
+            tools:node="remove" />
+        <service
+            android:name=".media.MediaNotificationListenerService"
+            tools:node="remove" />
+    </application>
+</manifest>
