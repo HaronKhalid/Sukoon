@@ -126,6 +126,12 @@ private fun NoteList(viewModel: NotesViewModel) {
         ) {
             Text(stringResource(R.string.notes_new))
         }
+        TextButton(
+                onClick = LocalOpenNoteAppearance.current,
+                modifier = Modifier.padding(horizontal = 16.dp).testTag("notes_appearance_open"),
+        ) {
+            Text(stringResource(R.string.notes_appearance_open))
+        }
         if (notes.isEmpty()) {
             Text(
                     stringResource(R.string.notes_empty),
@@ -280,7 +286,7 @@ private fun NoteEditor(viewModel: NotesViewModel) {
             }
         }
         if (showAppearance) {
-            AppearanceControls(appearance, viewModel::onAppearanceChange)
+            AppearanceControls(appearance, onChange = viewModel::onAppearanceChange)
         }
     }
     if (confirmDelete) {
@@ -307,9 +313,9 @@ private fun NoteEditor(viewModel: NotesViewModel) {
     }
 }
 
-private data class Swatch(val argb: Int, val labelRes: Int)
+internal data class Swatch(val argb: Int, val labelRes: Int)
 
-private val TextSwatches =
+internal val TextSwatches =
         listOf(
                 Swatch(0, R.string.notes_color_default),
                 Swatch(0xFFFFFFFF.toInt(), R.string.notes_color_white),
@@ -320,7 +326,7 @@ private val TextSwatches =
                 Swatch(0xFFFF8FA3.toInt(), R.string.notes_color_rose),
         )
 
-private val BackgroundSwatches =
+internal val BackgroundSwatches =
         listOf(
                 Swatch(0, R.string.notes_color_transparent),
                 Swatch(0x99000000.toInt(), R.string.notes_color_scrim),
@@ -332,7 +338,11 @@ private val BackgroundSwatches =
         )
 
 @Composable
-private fun AppearanceControls(a: NoteAppearance, onChange: (NoteAppearance) -> Unit) {
+internal fun AppearanceControls(
+        a: NoteAppearance,
+        importedFont: Pair<String, String>? = null,
+        onChange: (NoteAppearance) -> Unit,
+) {
     val fontOptions =
             buildList {
                 add("" to stringResource(R.string.typography_follow_launcher))
@@ -340,6 +350,7 @@ private fun AppearanceControls(a: NoteAppearance, onChange: (NoteAppearance) -> 
                 add("sans-serif" to stringResource(R.string.typography_system_sans))
                 add("serif" to stringResource(R.string.typography_system_serif))
                 add("monospace" to stringResource(R.string.typography_system_monospace))
+                importedFont?.let { add(it.first to it.second) }
             }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Label(stringResource(R.string.notes_font))
@@ -393,7 +404,7 @@ private fun AppearanceControls(a: NoteAppearance, onChange: (NoteAppearance) -> 
 }
 
 @Composable
-private fun Label(text: String) {
+internal fun Label(text: String) {
     Text(
             text,
             style = MaterialTheme.typography.labelLarge,
@@ -403,7 +414,7 @@ private fun Label(text: String) {
 }
 
 @Composable
-private fun ChipRow(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+internal fun ChipRow(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -422,7 +433,7 @@ private fun ChipRow(labels: List<String>, selected: Int, onSelect: (Int) -> Unit
 }
 
 @Composable
-private fun SwatchRow(swatches: List<Swatch>, selected: Int, onSelect: (Int) -> Unit) {
+internal fun SwatchRow(swatches: List<Swatch>, selected: Int, onSelect: (Int) -> Unit) {
     Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),

@@ -3,7 +3,7 @@
 Sukoon is a derivative of **Fokus Launcher** by Paul Scheduikat (lu4p) and contributors,
 https://github.com/luantak/FokusLauncher, licensed under the **GNU GPL v3** (see `LICENSE`).
 Sukoon is therefore distributed under GPL-3.0; full source is at https://github.com/HaronKhalid/Sukoon.
-Upstream git history is preserved; upstream copyright notices and `AUTHORS` are unchanged.
+Sukoon began as a modified copy of Fokus Launcher 1.9.8. Upstream copyright notices, `AUTHORS` and the licence are kept; the original history lives in the upstream repository (this repository's history was replaced by a fresh single commit on 2026-11-20).
 
 **Reference only (no code ported yet):** Victoria Launcher, https://github.com/adelmonte/victoria-launcher, GPL-3.0-or-later.
 
@@ -42,3 +42,5 @@ OFL obligations met: licence + copyright shipped with the fonts; fonts not sold 
 **Not bundled:** Jameel Noori Nastaleeq (no confirmed redistribution licence; excluded by brief and covered by a unit test).
 Roboto, Montserrat, Poppins, Outfit were not bundled in this pass (not needed; users can still import their own TTF/OTF via the existing custom-font feature).
 Open question for legal review before public binaries: confirm GPL-3.0 vs GPL-3.0-or-later compatibility when Victoria code is ported.
+
+**Imported fonts:** users can import their own `.ttf`/`.otf` (for example Jameel Noori Nastaleeq) from Fonts settings. The file is copied to app-private storage on the device only; Sukoon does not ship, upload or redistribute it. Imported font files are not part of configuration backups (the font choice key is; after a restore the font falls back to the system font until re-imported).

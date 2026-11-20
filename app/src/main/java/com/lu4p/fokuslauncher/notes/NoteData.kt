@@ -39,6 +39,9 @@ abstract class NoteDao {
     @Query("SELECT * FROM notes ORDER BY pinned DESC, updatedAt DESC, id DESC")
     abstract fun observeAll(): Flow<List<NoteEntity>>
 
+    @Query("SELECT * FROM notes")
+    abstract suspend fun getAll(): List<NoteEntity>
+
     @Query("SELECT * FROM notes WHERE pinned = 1 LIMIT 1")
     abstract fun observePinned(): Flow<NoteEntity?>
 

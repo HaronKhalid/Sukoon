@@ -132,6 +132,7 @@ object Routes {
     const val SETTINGS_APPS_MANAGEMENT = "settings_apps_management"
     const val SETTINGS_NOTES = "settings_notes"
     const val SETTINGS_TYPOGRAPHY = "settings_typography"
+    const val SETTINGS_NOTE_APPEARANCE = "settings_note_appearance"
     const val SETTINGS_BATTERY = "settings_battery"
     const val SETTINGS_FOCUS = "settings_focus"
 
@@ -319,7 +320,7 @@ fun FokusNavGraph(
                         .background(Color.Transparent)
         ) {
             // ── Main navigation (Home + Settings) ──────────────────────
-            CompositionLocalProvider(LocalOpenNotes provides { navController.navigateSingleTop(Routes.SETTINGS_NOTES) }) {
+            CompositionLocalProvider(LocalOpenNotes provides { navController.navigateSingleTop(Routes.SETTINGS_NOTES) }, com.lu4p.fokuslauncher.notes.LocalOpenNoteAppearance provides { navController.navigateSingleTop(Routes.SETTINGS_NOTE_APPEARANCE) }) {
             ProvideElementFonts {
             NavHost(
             navController = navController,
@@ -884,6 +885,13 @@ fun FokusNavGraph(
                 NotesScreen(
                         onNavigateBack = { navController.popBackStack() },
                         backgroundScrim = Color.Black,
+                )
+            }
+
+            fokusSettingsComposable(Routes.SETTINGS_NOTE_APPEARANCE) {
+                com.lu4p.fokuslauncher.notes.NoteAppearanceScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        backgroundScrim = com.lu4p.fokuslauncher.theme.themedSettingsScrim,
                 )
             }
 

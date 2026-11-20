@@ -31,6 +31,8 @@ private class FakeNoteDao : NoteDao() {
 
     override suspend fun get(id: Long): NoteEntity? = rows.value[id]
 
+    override suspend fun getAll(): List<NoteEntity> = rows.value.values.toList()
+
     override suspend fun upsert(note: NoteEntity): Long {
         val id = if (note.id == 0L) nextId++ else note.id
         rows.value = rows.value + (id to note.copy(id = id))
