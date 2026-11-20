@@ -2,8 +2,14 @@ name: Build and test
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Create a GitHub release with this tag (for example v0.1.0). Leave empty to only build."
+        required: false
+        default: ""
   push:
     branches: [main, master, "feat/**"]
+    tags: ["v*"]
   pull_request:
 
 permissions:
@@ -66,3 +72,54 @@ jobs:
           name: sukoon-lite-debug-apk
           path: dist/sukoon-lite-debug.apk
           if-no-files-found: error
+
+  release:
+    # Runs for a pushed v* tag, or when the workflow is started by hand with a release_tag.
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != '' }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download APKs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sukoon-*-debug-apk
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.release_tag }}
+        run: |
+          TAG="${INPUT_TAG:-$GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          cp dist/sukoon-lite-debug.apk "dist/Sukoon-${VERSION}-lite-debug.apk"
+          cp dist/sukoon-standard-debug.apk "dist/Sukoon-${VERSION}-standard-debug.apk"
+          cat > release-notes.md <<'EOF'
+          Early test build of **Sukoon**, a focus-first Android launcher.
+
+          ## Which file should I install?
+          - `Sukoon-<version>-lite-debug.apk` — try this first. It leaves out the accessibility service and the
+            notification listener, so Google Play Protect is less likely to block the install.
+            You lose double-tap-to-lock, the media widget and notification dots.
+          - `Sukoon-<version>-standard-debug.apk` — the full app. Play Protect may block it on some phones.
+
+          ## Good to know
+          - These are **debug-signed test builds**, not store releases. Each GitHub build uses a new debug key,
+            so to install a newer build over an older one you may need to uninstall the old one first.
+          - Not yet tested on a real device by the maintainer. Please report problems as GitHub issues.
+          - Built-in: themes, layout and clock studio, English/Urdu fonts, notes, wallpapers, focus profiles,
+            battery dashboard. See the README.
+
+          ## Credits
+          Built on **Fokus Launcher** by **Paul Scheduikat and contributors** (GPL-3.0). **Victoria Launcher**
+          by **adelmonte** was used only as a reference. Fonts: Inter, Noto Naskh Arabic, Noto Nastaliq Urdu
+          (SIL OFL 1.1). Full credits and licence: README.md and LICENSE. Source code is this repository.
+          EOF
+          gh release create "$TAG" "dist/Sukoon-${VERSION}-lite-debug.apk" "dist/Sukoon-${VERSION}-standard-debug.apk" \
+            --target "$GITHUB_SHA" --title "Sukoon ${VERSION} (test build)" \
+            --notes-file release-notes.md --prerelease
