@@ -50,3 +50,8 @@ No analytics, accounts or ads. Data stays on device.
 - In-app notes are stored **only on the device** in the app's private Room database (`fokus_launcher_db`, table `notes`). No account, no sync, no network call, no analytics, no new permission.
 - Notes are not included in any export or share action; the optional SAF markdown note folder remains the only way a note leaves private storage, and only when the user picks that folder.
 - Bundled fonts are read from the APK assets; per-element font choices are stored locally in `typography_preferences` (DataStore).
+
+## Battery (Milestone 6)
+- No new permission. Battery values come from the `ACTION_BATTERY_CHANGED` sticky broadcast (no permission needed), registered only while the Battery settings screen is visible.
+- Level history (timestamp, level, charging; max 500) is stored only on the device in the `battery_preferences` DataStore and can be wiped with "Clear data". Not exported.
+- Per-app screen time uses the existing optional `PACKAGE_USAGE_STATS` access, explained before the user is sent to Android Settings; it is labelled screen time, never battery use.

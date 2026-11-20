@@ -79,3 +79,11 @@ Added package `home/layout` (model, presets, codec, repository, ViewModel, `Conf
 - Size scales text through `LocalDensity.fontScale`; spacing is relative to NORMAL (`layoutPadDp`), so the default config keeps the original paddings. Alignment applies to date, app search and focus status only.
 - New elements: app search (opens the drawer via `onOpenDrawer`) and focus status (shows/starts/pauses the Pomodoro session).
 - Verified: `./gradlew assembleDebug testDebugUnitTest --tests "com.lu4p.fokuslauncher.home.layout.*"` BUILD SUCCESSFUL; `LayoutSpacingTest` 5/5. Not verified: appearance on a device, full unit-test suite, lint.
+
+## Milestone 6: battery intelligence (branch feat/battery)
+- New package `battery`: `BatteryParser` (pure, missing/invalid -> null -> "Not available"), `BatteryReader` (ACTION_BATTERY_CHANGED), `BatteryHistory` (capped 500, 5-min dedupe, text codec), `BatteryRecommendations`, `BatteryRepository` (own DataStore `battery_preferences`: history + power profile), `AppScreenTimeReader`, `BatterySettingsScreen`.
+- Receiver is registered only between ON_START and ON_STOP of the screen; no service, no polling. History samples are recorded only from that receiver while the screen is open.
+- Shown: percent, charge state, plug type, temperature, voltage, technology, health flag. No capacity, health %, or per-app power is shown anywhere.
+- Per-app figures are foreground "screen time" (queryAndAggregateUsageStats, last 24 h, system-bucketed so approximate), reusing `UsageStatsHelper`; access is explained in a dialog before opening Android's Usage access screen; disabled state when not granted.
+- Power profiles are a stored launcher-level preference with suggestions only: the launcher has no decorative-animation or refresh setting to toggle, so nothing is changed silently. Button opens `ACTION_BATTERY_SAVER_SETTINGS`.
+- Shared files touched additively: `NavGraph.kt`, `SettingsScreen.kt`; strings in `strings_battery.xml`. No manifest, permission or dependency change. Not verified on a device (OnePlus 8 measurement still open).
