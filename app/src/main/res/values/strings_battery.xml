@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="battery_settings_title">Battery</string>
+    <string name="battery_settings_subtitle">Readings reported by Android, level history, power profiles</string>
+    <string name="battery_not_available">Not available</string>
+    <string name="battery_honesty_note">Only values Android reports to apps are shown. This launcher cannot read battery capacity, health percentage or per-app power use, so none are shown.</string>
+    <string name="battery_label_level">Level</string>
+    <string name="battery_label_state">Charging state</string>
+    <string name="battery_label_plug">Power source</string>
+    <string name="battery_label_temperature">Temperature</string>
+    <string name="battery_label_voltage">Voltage</string>
+    <string name="battery_label_technology">Technology</string>
+    <string name="battery_label_health">Health flag (as reported)</string>
+    <string name="battery_state_charging">Charging</string>
+    <string name="battery_state_discharging">Discharging</string>
+    <string name="battery_state_full">Full</string>
+    <string name="battery_state_not_charging">Not charging</string>
+    <string name="battery_plug_none">Unplugged</string>
+    <string name="battery_plug_ac">AC adapter</string>
+    <string name="battery_plug_usb">USB</string>
+    <string name="battery_plug_wireless">Wireless</string>
+    <string name="battery_plug_dock">Dock</string>
+    <string name="battery_plug_other">Other</string>
+    <string name="battery_health_good">Good</string>
+    <string name="battery_health_overheat">Overheat</string>
+    <string name="battery_health_dead">Dead</string>
+    <string name="battery_health_over_voltage">Over voltage</string>
+    <string name="battery_health_failure">Unspecified failure</string>
+    <string name="battery_health_cold">Cold</string>
+    <string name="battery_value_percent">%1$d%%</string>
+    <string name="battery_value_temperature">%1$.1f °C</string>
+    <string name="battery_value_voltage">%1$d mV</string>
+
+    <string name="battery_history_title">Level history</string>
+    <string name="battery_history_note">Samples are recorded only while this screen is open, stored on this device, and capped at %1$d.</string>
+    <string name="battery_history_empty">Not enough samples yet. Keep this screen open or come back later.</string>
+    <string name="battery_history_count">%1$d samples</string>
+    <string name="battery_history_clear">Clear data</string>
+
+    <string name="battery_usage_title">Screen time per app</string>
+    <string name="battery_usage_why">Android only shares how long each app was on screen through Usage access. This is screen time, not battery use: an app on screen for a long time can use little power, and background power use is not shown.</string>
+    <string name="battery_usage_disabled">Usage access is off, so this section is disabled. The rest of the launcher works normally.</string>
+    <string name="battery_usage_grant">Review and grant usage access</string>
+    <string name="battery_usage_dialog_title">Usage access</string>
+    <string name="battery_usage_dialog_body">Android will open its Usage access screen. Enable it for this launcher only if you want per-app screen time here. Data stays on your device and you can revoke access at any time.</string>
+    <string name="battery_usage_continue">Continue</string>
+    <string name="battery_usage_cancel">Cancel</string>
+    <string name="battery_usage_last24">Screen time, last 24 hours (approximate)</string>
+    <string name="battery_usage_none">No app screen time recorded.</string>
+
+    <string name="battery_profile_title">Power profile</string>
+    <string name="battery_profile_note">Launcher-level preference only. It never changes Android system settings.</string>
+    <string name="battery_profile_balanced">Balanced</string>
+    <string name="battery_profile_balanced_desc">Normal launcher behaviour. No background polling.</string>
+    <string name="battery_profile_saver">Power Saver</string>
+    <string name="battery_profile_saver_desc">Suggested: use a static wallpaper and avoid auto-refreshing widgets. Use Android Battery Saver below if you want system-wide effects.</string>
+    <string name="battery_profile_extreme">Extreme Focus</string>
+    <string name="battery_profile_extreme_desc">Suggested: dark theme, only essential apps on home, no animated or online wallpaper.</string>
+    <string name="battery_open_saver_settings">Open Android Battery Saver settings</string>
+
+    <string name="battery_recs_title">Suggestions</string>
+    <string name="battery_rec_warm">The battery is warm. Consider closing demanding apps or removing the case.</string>
+    <string name="battery_rec_hot">The battery is hot. Stop charging and heavy use until it cools down.</string>
+    <string name="battery_rec_health">Android reports a battery health flag other than Good.</string>
+    <string name="battery_rec_low_saver">Battery is below 20 percent and Battery Saver is off. You can turn it on in Android settings.</string>
+</resources>
