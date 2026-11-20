@@ -1,4 +1,4 @@
-package com.lu4p.fokuslauncher.ui.settings
+﻿package com.lu4p.fokuslauncher.ui.settings
 
 import android.content.Context
 import android.content.Intent
@@ -67,6 +67,7 @@ fun SettingsScreen(
         onOpenNotesSettings: () -> Unit = {},
         onOpenTypographySettings: () -> Unit = {},
         onOpenBatterySettings: () -> Unit = {},
+        onOpenFocusSettings: () -> Unit = {},
         backgroundScrim: Color = FokusBackdrop.ScrimColorWithoutBlur,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -107,6 +108,7 @@ fun SettingsScreen(
                 onOpenNotesSettings = onOpenNotesSettings,
                 onOpenTypographySettings = onOpenTypographySettings,
                 onOpenBatterySettings = onOpenBatterySettings,
+                onOpenFocusSettings = onOpenFocusSettings,
                 onShowResetConfirm = { showResetConfirm.value = true },
         )
     }
@@ -142,6 +144,7 @@ private fun SettingsHubContent(
         onOpenNotesSettings: () -> Unit,
         onOpenTypographySettings: () -> Unit,
         onOpenBatterySettings: () -> Unit,
+        onOpenFocusSettings: () -> Unit,
         onShowResetConfirm: () -> Unit,
 ) {
     val homeScreenSubpageRows =
@@ -270,6 +273,15 @@ private fun SettingsHubContent(
                     subtitle = stringResource(R.string.battery_settings_subtitle),
                     verticalPadding = 14.dp,
                     onClick = onOpenBatterySettings,
+                    trailing = { SubpageChevron() },
+            )
+        }
+        item {
+            SettingsRow(
+                    label = stringResource(R.string.focus_title),
+                    subtitle = stringResource(R.string.focus_settings_subtitle),
+                    verticalPadding = 14.dp,
+                    onClick = onOpenFocusSettings,
                     trailing = { SubpageChevron() },
             )
         }

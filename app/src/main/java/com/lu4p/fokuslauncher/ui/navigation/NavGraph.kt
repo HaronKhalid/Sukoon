@@ -1,4 +1,4 @@
-package com.lu4p.fokuslauncher.ui.navigation
+﻿package com.lu4p.fokuslauncher.ui.navigation
 
 import android.app.Activity
 import android.app.ActivityOptions
@@ -133,6 +133,7 @@ object Routes {
     const val SETTINGS_NOTES = "settings_notes"
     const val SETTINGS_TYPOGRAPHY = "settings_typography"
     const val SETTINGS_BATTERY = "settings_battery"
+    const val SETTINGS_FOCUS = "settings_focus"
 
     fun iconPickerShortcut(index: Int): String = "settings_icon_picker/shortcut/$index"
 
@@ -885,6 +886,13 @@ fun FokusNavGraph(
 
             fokusSettingsComposable(Routes.SETTINGS_BATTERY) {
                 com.lu4p.fokuslauncher.battery.BatterySettingsScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        backgroundScrim = Color.Black,
+                )
+            }
+
+            fokusSettingsComposable(Routes.SETTINGS_FOCUS) {
+                com.lu4p.fokuslauncher.focus.FocusSettingsScreen(
                         onNavigateBack = { navController.popBackStack() },
                         backgroundScrim = Color.Black,
                 )

@@ -94,3 +94,10 @@ Added package `home/layout` (model, presets, codec, repository, ViewModel, `Conf
 - Per-app figures are foreground "screen time" (queryAndAggregateUsageStats, last 24 h, system-bucketed so approximate), reusing `UsageStatsHelper`; access is explained in a dialog before opening Android's Usage access screen; disabled state when not granted.
 - Power profiles are a stored launcher-level preference with suggestions only: the launcher has no decorative-animation or refresh setting to toggle, so nothing is changed silently. Button opens `ACTION_BATTERY_SAVER_SETTINGS`.
 - Shared files touched additively: `NavGraph.kt`, `SettingsScreen.kt`; strings in `strings_battery.xml`. No manifest, permission or dependency change. Not verified on a device (OnePlus 8 measurement still open).
+## Milestone 5: focus profiles (branch feat/focus-profiles)
+- New package `focus`: `FocusModel` (profiles Study/Work/Personal/Sleep/Custom, schedule with overnight ranges, pure `filterForFocus` and `resolveOnResume`), `FocusCodec` (versioned JSON on the theme package's strict `MiniJson`, fails safe to defaults), `FocusController` (DataStore persistence, activation, session wrapper over `PomodoroRepository`), `FocusSettingsScreen`.
+- Visibility hook: `FocusVisibility.allowed` (process-wide StateFlow of `profile|package` keys, null = off). `AppDrawerViewModel.rebuildVisibleApps` and `HomeViewModel.favorites` filter through it; an empty app set means no filtering so the user cannot lock themselves out.
+- Layout preset and theme are applied through `HomeLayoutRepository`/`ThemeStore`; the prior values are snapshotted and restored exactly on disable.
+- Schedules are evaluated only in `MainActivity.onResume` (no service, no alarms). A user switch-off is respected until the schedule window ends.
+- UI: Settings > Focus, with the notice that hiding only affects this launcher. Strings are in `strings_focus.xml`.
+- Not done: focus keys are not in configuration backups; times are stepped in 30-minute taps (no time picker); private-space drawer apps are not filtered.
