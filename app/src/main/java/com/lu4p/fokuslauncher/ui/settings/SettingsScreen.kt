@@ -63,6 +63,7 @@ fun SettingsScreen(
         onOpenAppsManagementSettings: () -> Unit = {},
         onOpenGesturesSettings: () -> Unit = {},
         onOpenThemeStudio: () -> Unit = {},
+        onOpenWallpaper: () -> Unit = {},
         onOpenNotesSettings: () -> Unit = {},
         onOpenTypographySettings: () -> Unit = {},
         backgroundScrim: Color = FokusBackdrop.ScrimColorWithoutBlur,
@@ -101,6 +102,7 @@ fun SettingsScreen(
                 onOpenAppsManagementSettings = onOpenAppsManagementSettings,
                 onOpenGesturesSettings = onOpenGesturesSettings,
                 onOpenThemeStudio = onOpenThemeStudio,
+                onOpenWallpaper = onOpenWallpaper,
                 onOpenNotesSettings = onOpenNotesSettings,
                 onOpenTypographySettings = onOpenTypographySettings,
                 onShowResetConfirm = { showResetConfirm.value = true },
@@ -134,6 +136,7 @@ private fun SettingsHubContent(
         onOpenAppsManagementSettings: () -> Unit,
         onOpenGesturesSettings: () -> Unit,
         onOpenThemeStudio: () -> Unit,
+        onOpenWallpaper: () -> Unit,
         onOpenNotesSettings: () -> Unit,
         onOpenTypographySettings: () -> Unit,
         onShowResetConfirm: () -> Unit,
@@ -237,6 +240,15 @@ private fun SettingsHubContent(
                     subtitle = stringResource(R.string.theme_studio_subtitle),
                     verticalPadding = 14.dp,
                     onClick = onOpenThemeStudio,
+                    trailing = { SubpageChevron() },
+            )
+        }
+        item {
+            SettingsRow(
+                    label = stringResource(R.string.wallpaper_title),
+                    subtitle = stringResource(R.string.wallpaper_subtitle),
+                    verticalPadding = 14.dp,
+                    onClick = onOpenWallpaper,
                     trailing = { SubpageChevron() },
             )
         }

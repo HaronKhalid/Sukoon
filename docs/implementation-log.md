@@ -79,3 +79,11 @@ Added package `home/layout` (model, presets, codec, repository, ViewModel, `Conf
 - Size scales text through `LocalDensity.fontScale`; spacing is relative to NORMAL (`layoutPadDp`), so the default config keeps the original paddings. Alignment applies to date, app search and focus status only.
 - New elements: app search (opens the drawer via `onOpenDrawer`) and focus status (shows/starts/pauses the Pomodoro session).
 - Verified: `./gradlew assembleDebug testDebugUnitTest --tests "com.lu4p.fokuslauncher.home.layout.*"` BUILD SUCCESSFUL; `LayoutSpacingTest` 5/5. Not verified: appearance on a device, full unit-test suite, lint.
+
+## 2026-11-20 - Wallpaper settings (Milestone 4)
+- New package `wallpaper` and a "Wallpaper" settings page (route `settings_wallpaper`, row after Theme Studio). Picks via `PickVisualMedia` (no storage permission).
+- Preview uses centre-crop at the screen aspect; `WallpaperMath.centerCrop` computes the same rect that `WallpaperRepository.apply` writes through `WallpaperManager.setBitmap` (home = FLAG_SYSTEM). Existing `setHomeUsesPhotoWallpaper(true)` is reused so the launcher switches to the photo look.
+- Lock screen is an opt-in checkbox; the result toast says honestly if the device refused. The preview is labelled as not the system lock screen.
+- Recent picks are downscaled JPEG copies in `filesDir/wallpapers` (max 8, oldest evicted, user can remove); no DB blobs. Colour extraction is a pure-Kotlin average on a 32px downscale (no Palette dependency).
+- Built-in set is five code-generated black-to-dark gradients (no third-party images). Strings in `strings_wallpaper.xml`.
+- Tests: `WallpaperMathTest` (crop, sample size, average/dominant colour, recents). Not verified on a device.

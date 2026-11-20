@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wallpaper_title">Wallpaper</string>
+    <string name="wallpaper_subtitle">Pick an image, preview and set it</string>
+    <string name="wallpaper_pick">Choose a photo</string>
+    <string name="wallpaper_preview_note">Preview is centre-cropped to your screen shape. It is not the system lock screen.</string>
+    <string name="wallpaper_section_builtin">Built-in (generated, AMOLED-friendly)</string>
+    <string name="wallpaper_section_recent">Recent picks</string>
+    <string name="wallpaper_recent_empty">Photos you choose are remembered here, stored privately on this device.</string>
+    <string name="wallpaper_builtin_black">Pure black</string>
+    <string name="wallpaper_builtin_midnight">Midnight</string>
+    <string name="wallpaper_builtin_ember">Ember</string>
+    <string name="wallpaper_builtin_forest">Forest</string>
+    <string name="wallpaper_builtin_dusk">Dusk</string>
+    <string name="wallpaper_set_home">Set as home wallpaper</string>
+    <string name="wallpaper_also_lock">Also try to set the lock-screen wallpaper</string>
+    <string name="wallpaper_also_lock_hint">Not every device lets apps change it; the result is reported honestly.</string>
+    <string name="wallpaper_average_color">Average colour: %1$s</string>
+    <string name="wallpaper_remove">Remove</string>
+    <string name="wallpaper_applied_home">Home wallpaper set</string>
+    <string name="wallpaper_applied_home_lock">Home and lock-screen wallpaper set</string>
+    <string name="wallpaper_lock_failed">Home wallpaper set, but this device did not allow changing the lock screen</string>
+    <string name="wallpaper_failed">Could not set the wallpaper</string>
+    <string name="wallpaper_load_failed">Could not open that image</string>
+</resources>
