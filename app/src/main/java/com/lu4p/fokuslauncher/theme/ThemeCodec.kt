@@ -266,7 +266,13 @@ object ThemeCodec {
                 append("    \"clockFaceId\": ${q(theme.style.clockFaceId)},\n")
                 append("    \"layoutPreset\": ${q(theme.style.layoutPreset)},\n")
                 append("    \"fontWeight\": ${theme.style.fontWeight},\n")
-                append("    \"letterSpacingEm\": ${String.format(java.util.Locale.ROOT, "%.3f", theme.style.letterSpacingEm)}\n")
+                append("    \"letterSpacingEm\": ${String.format(java.util.Locale.ROOT, "%.3f", theme.style.letterSpacingEm)}")
+                // Additive keys: only written when used, so themes without a backdrop encode as before.
+                if (theme.style.backdrop.isNotEmpty()) {
+                    append(",\n    \"backdrop\": ${q(theme.style.backdrop)},\n")
+                    append("    \"backdropIntensity\": ${String.format(java.util.Locale.ROOT, "%.3f", theme.style.backdropIntensity)}")
+                }
+                append("\n")
                 append("  }\n")
                 append("}")
             }

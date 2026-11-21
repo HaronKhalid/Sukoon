@@ -51,21 +51,14 @@ fun StyleGalleryScreen(
         viewModel: StyleGalleryViewModel = hiltViewModel(),
         onNavigateBack: () -> Unit = {},
         backgroundScrim: Color = themedSettingsScrim,
+        onCustomize: () -> Unit = {},
 ) {
-    Column(
-            modifier =
-                    Modifier.fillMaxSize()
-                            .background(backgroundScrim)
-                            .navigationBarsPadding()
-                            .testTag("style_gallery_screen")
-    ) {
-        FokusSettingsTopBar(
-                titleText = stringResource(R.string.style_gallery_title),
-                onNavigateBack = onNavigateBack,
-                containerColor = MaterialTheme.colorScheme.background,
-        )
-        StyleGalleryContent(viewModel = viewModel, modifier = Modifier.weight(1f))
-    }
+    // The full-screen carousel is the main view; the grid-style content below remains for the first-run sheet.
+    com.lu4p.fokuslauncher.ui.editor.ThemeCarousel(
+            viewModel = viewModel,
+            onBack = onNavigateBack,
+            onCustomize = onCustomize,
+    )
 }
 
 /** Filter chips plus a swipeable pager of [HomePreviewCard]s; shared by the screen and the first-run sheet. */
