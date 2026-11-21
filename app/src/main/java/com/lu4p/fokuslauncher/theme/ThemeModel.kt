@@ -71,6 +71,10 @@ data class ThemeStyle(
         val layoutPreset: String = "DEFAULT",
         val fontWeight: Int = 0,
         val letterSpacingEm: Float = 0f,
+        /** Procedural backdrop id (see backdrop.Backdrops); empty = none. Unknown ids paint nothing. */
+        val backdrop: String = "",
+        /** Backdrop opacity over the theme background, 0..1. */
+        val backdropIntensity: Float = 1f,
 ) {
     /** [clockFaceId] if it is a known face, otherwise the default digital clock. */
     val resolvedClockFaceId: String get() = ClockFaces.resolve(clockFaceId)

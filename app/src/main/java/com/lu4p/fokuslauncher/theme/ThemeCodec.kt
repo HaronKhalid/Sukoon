@@ -161,6 +161,7 @@ object ThemeCodec {
         )
     }
 
+    private val BACKDROP_REGEX = Regex("^[a-z0-9-]{1,32}$")
     private val CLOCK_FACE_REGEX = Regex("^[a-z0-9][a-z0-9_-]{0,47}$")
 
     private fun parseGradient(v: Any?): ThemeGradient? {
@@ -210,7 +211,21 @@ object ThemeCodec {
                     else -> return null
                 }
         if (spacing.isNaN() || spacing < -0.1f || spacing > ThemeStyle.MAX_LETTER_SPACING_EM) return null
-        return ThemeStyle(face, preset, weight, spacing)
+        val backdrop =
+                when (val b = s["backdrop"]) {
+                    null -> ""
+                    is String -> if (BACKDROP_REGEX.matches(b)) b else return null
+                    else -> return null
+                }
+        val intensity =
+                when (val i = s["backdropIntensity"]) {
+                    null -> 1f
+                    is Long -> i.toFloat()
+                    is Double -> i.toFloat()
+                    else -> return null
+                }
+        if (intensity.isNaN() || intensity < 0f || intensity > 1f) return null
+        return ThemeStyle(face, preset, weight, spacing, backdrop, intensity)
     }
 
     /** True when [theme] would pass import validation (used by the editor before saving). */
