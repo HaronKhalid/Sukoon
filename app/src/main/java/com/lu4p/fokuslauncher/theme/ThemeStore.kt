@@ -3,6 +3,7 @@ package com.lu4p.fokuslauncher.theme
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.lu4p.fokuslauncher.data.local.fokusLauncherPreferencesDataStore
@@ -13,7 +14,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
-/** Persisted theme state. [selectedId] null means "no theme applied" (legacy Fokus look). */
+/**
+ * Persisted theme state. [selectedId] null means "nothing chosen yet", which shows Sukoon's own
+ * default theme; [BuiltInThemes.ID_CLASSIC] keeps the legacy Fokus look.
+ */
 data class ThemeState(
         val selectedId: String?,
         val customThemes: List<ThemeDefinition>,
@@ -21,9 +25,18 @@ data class ThemeState(
     val allThemes: List<ThemeDefinition>
         get() = BuiltInThemes.all + customThemes
 
-    /** The applied theme, or null if none is selected or the stored id no longer exists. */
+    /** True when the user explicitly chose the legacy look. */
+    val isClassic: Boolean get() = selectedId == BuiltInThemes.ID_CLASSIC
+
+    /**
+     * The theme to paint: the chosen one, Sukoon's default when nothing (valid) is chosen, or null
+     * only for the explicit classic look.
+     */
     val applied: ThemeDefinition?
-        get() = selectedId?.let { id -> allThemes.firstOrNull { it.id == id } }
+        get() =
+                if (isClassic) null
+                else selectedId?.let { id -> allThemes.firstOrNull { it.id == id } }
+                        ?: BuiltInThemes.SukoonDefault
 }
 
 sealed interface ThemeImportResult {
@@ -63,9 +76,25 @@ class ThemeStore internal constructor(private val dataStore: DataStore<Preferenc
         dataStore.edit { it[SELECTED_KEY] = id }
     }
 
-    /** Clears the selection and returns to the legacy launcher look. */
+    /** Returns to the legacy (Fokus-like) launcher look. */
     suspend fun reset() {
-        dataStore.edit { it.remove(SELECTED_KEY) }
+        dataStore.edit { it[SELECTED_KEY] = BuiltInThemes.ID_CLASSIC }
+    }
+
+    /** Clock face id suggested by the last applied style (read by the clock engine; may be unknown). */
+    val clockFaceId: Flow<String> =
+            dataStore.data.map { ClockFaces.resolve(it[CLOCK_FACE_KEY]) }.distinctUntilChanged()
+
+    suspend fun setClockFaceId(id: String) {
+        dataStore.edit { it[CLOCK_FACE_KEY] = ClockFaces.resolve(id) }
+    }
+
+    /** Whether the one-time "Choose your style" sheet was already shown or skipped. */
+    val stylePromptSeen: Flow<Boolean> =
+            dataStore.data.map { it[STYLE_PROMPT_KEY] == true }.distinctUntilChanged()
+
+    suspend fun markStylePromptSeen() {
+        dataStore.edit { it[STYLE_PROMPT_KEY] = true }
     }
 
     /**
@@ -132,6 +161,9 @@ class ThemeStore internal constructor(private val dataStore: DataStore<Preferenc
     companion object {
         const val MAX_CUSTOM_THEMES = 20
         private val SELECTED_KEY = stringPreferencesKey("theme_selected_id")
+        const val CLOCK_FACE_KEY_NAME = "clock_face_id"
+        private val CLOCK_FACE_KEY = stringPreferencesKey(CLOCK_FACE_KEY_NAME)
+        private val STYLE_PROMPT_KEY = booleanPreferencesKey("style_prompt_seen")
         private val CUSTOM_KEY = stringPreferencesKey("theme_custom_themes_v1")
 
         fun newCustomId(taken: Set<String>): String {

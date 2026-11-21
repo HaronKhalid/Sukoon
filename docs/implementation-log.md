@@ -101,3 +101,13 @@ Added package `home/layout` (model, presets, codec, repository, ViewModel, `Conf
 - Schedules are evaluated only in `MainActivity.onResume` (no service, no alarms). A user switch-off is respected until the schedule window ends.
 - UI: Settings > Focus, with the notice that hiding only affects this launcher. Strings are in `strings_focus.xml`.
 - Not done: focus keys are not in configuration backups; times are stepped in 30-minute taps (no time picker); private-space drawer apps are not filtered.
+
+## Design pass: themes, Style Gallery, Theme Studio (feat/design-themes)
+- Theme schema v2 (additive): optional `gradient` (2-3 stops + CSS-style angle) and `style` bundle (clock face id, layout preset name, font weight, letter spacing). v1 JSON decodes unchanged via a no-op 1->2 migration step; unknown clock ids are kept on import and resolve to `classic-digital` at use (`ClockFaces.resolve`).
+- 14 new built-in themes (Aurora, Sunset Dunes, Rose Quartz, Forest Mist, Desert Sand, Lavender Dusk, Graphite, Paper, Mint, Ocean Deep, Neon Night, Sakura, Slate Blue, Coffee); the original eight ids are unchanged. A unit test enforces primary-text contrast >= 4.5 on every gradient stop of every built-in theme.
+- First-run default is now Aurora (nothing chosen = Sukoon default). "Classic (Fokus-like)" is the explicit selection id `classic` (`ThemeStore.reset()` selects it) and still gives the legacy look; any saved selection is untouched.
+- Home background paints the gradient through an angled `ShaderBrush` (`backgroundBrush()`); photo wallpapers still bypass themes. Settings scrims stay one solid colour (`LocalThemeBackground` = the middle stop) because 20 call sites take a `Color`.
+- Typography feel: `Typography.withThemeFeel` sets weight and letter spacing on display/headline/title styles only; the font family is never touched.
+- New screens: Settings > Customize > Style Gallery (`StyleGalleryScreen`, pager of `HomePreviewCard`, Dark/Light/Colourful/Minimal filters) and a skippable one-time "Choose your style" sheet (`StyleFirstRunSheet`, flag `style_prompt_seen`). Applying sets theme + layout preset (`HomeLayoutRepository`) + clock face id in one go.
+- Clock face id is stored under DataStore key `clock_face_id` (`ThemeStore.clockFaceId`); the clock engine must read it, until then the preview shows faces but the home clock is unchanged.
+- Theme Studio: pinned live `HomePreviewCard`, gradient editor (hex stops, optional third stop, angle presets), "Duplicate as custom theme"; export/import still goes through the strict codec.

@@ -11,11 +11,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +44,8 @@ import com.lu4p.fokuslauncher.theme.BuiltInThemes
 import com.lu4p.fokuslauncher.theme.ThemeColorField
 import com.lu4p.fokuslauncher.theme.ThemeColorMath
 import com.lu4p.fokuslauncher.theme.ThemeDefinition
+import com.lu4p.fokuslauncher.theme.ThemeGradient
+import com.lu4p.fokuslauncher.theme.backgroundBrush
 import com.lu4p.fokuslauncher.theme.ThemeImportResult
 import com.lu4p.fokuslauncher.theme.ThemeState
 import com.lu4p.fokuslauncher.theme.get
@@ -87,9 +91,15 @@ fun ThemeStudioScreen(
                 onNavigateBack = onNavigateBack,
                 containerColor = MaterialTheme.colorScheme.background,
         )
+        HomePreviewCard(
+                theme = draft,
+                modifier =
+                        Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                                .fillMaxWidth()
+                                .height(230.dp)
+                                .testTag("theme_preview"),
+        )
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            item { SectionHeader(stringResource(R.string.theme_studio_section_preview)) }
-            item { ThemePreview(draft) }
             if (!readable) {
                 item {
                     Text(
@@ -108,13 +118,13 @@ fun ThemeStudioScreen(
                     viewModel.apply(state) { ok -> toast(if (ok) R.string.theme_studio_saved else R.string.theme_studio_save_failed) }
                 }
             }
-            if (state.selectedId != null) {
+            if (!state.isClassic) {
                 item { ActionRow(stringResource(R.string.theme_studio_reset)) { viewModel.reset() } }
             }
             item { SettingsDivider() }
 
             item { SectionHeader(stringResource(R.string.theme_studio_section_themes)) }
-            if (state.selectedId == null) {
+            if (state.isClassic) {
                 item {
                     Text(
                             stringResource(R.string.theme_studio_none_applied),
@@ -145,8 +155,63 @@ fun ThemeStudioScreen(
             item { SettingsDivider() }
 
             item { SectionHeader(stringResource(R.string.theme_studio_section_colors)) }
-            items(ThemeColorField.entries.toList(), key = { it.name }) { field ->
+            items(
+                    ThemeColorField.entries.filter { it != ThemeColorField.BACKGROUND || draft.gradient == null },
+                    key = { it.name },
+            ) { field ->
                 ColorFieldRow(field, draft.colors.get(field)) { viewModel.setColor(field, it) }
+            }
+            item { SettingsDivider() }
+
+            item { SectionHeader(stringResource(R.string.theme_studio_section_gradient)) }
+            item {
+                SettingsRow(
+                        label = stringResource(R.string.theme_studio_gradient_enable),
+                        modifier = Modifier.testTag("theme_gradient_toggle"),
+                        onClick = { viewModel.setGradientEnabled(draft.gradient == null) },
+                        trailing = {
+                            androidx.compose.material3.Switch(
+                                    checked = draft.gradient != null,
+                                    onCheckedChange = { viewModel.setGradientEnabled(it) },
+                            )
+                        },
+                )
+            }
+            draft.gradient?.let { g ->
+                itemsIndexed(g.stops) { i, stop ->
+                    HexRow(
+                            label = stringResource(R.string.theme_studio_gradient_stop, i + 1),
+                            color = stop,
+                            tag = "theme_gradient_stop_$i",
+                    ) { viewModel.setGradientStop(i, it) }
+                }
+                item {
+                    ActionRow(
+                            stringResource(
+                                    if (g.stops.size < ThemeGradient.MAX_STOPS) R.string.theme_studio_gradient_add_stop
+                                    else R.string.theme_studio_gradient_remove_stop
+                            )
+                    ) { viewModel.setThirdStop(g.stops.size < ThemeGradient.MAX_STOPS) }
+                }
+                item {
+                    Column(Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
+                        Text(
+                                stringResource(R.string.theme_studio_gradient_angle),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                        )
+                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(ThemeGradient.ANGLE_PRESETS, key = { it }) { a ->
+                                androidx.compose.material3.FilterChip(
+                                        selected = g.angleDegrees == a,
+                                        onClick = { viewModel.setGradientAngle(a) },
+                                        label = { Text(stringResource(R.string.theme_studio_gradient_angle_value, a)) },
+                                        modifier = Modifier.testTag("theme_gradient_angle_$a"),
+                                )
+                            }
+                        }
+                    }
+                }
             }
             if (edited && source != null) {
                 item { ActionRow(stringResource(R.string.theme_studio_discard)) { viewModel.discardEdits(state) } }
@@ -164,6 +229,13 @@ fun ThemeStudioScreen(
                 }
                 item { ActionRow(stringResource(R.string.theme_studio_rename)) { dialog = StudioDialog.RENAME } }
                 item { ActionRow(stringResource(R.string.theme_studio_delete)) { dialog = StudioDialog.DELETE } }
+            }
+            item {
+                ActionRow(stringResource(R.string.theme_studio_duplicate), enabled = readable) {
+                    viewModel.duplicate(state, draft.name) {
+                        toast(if (it) R.string.theme_studio_saved else R.string.theme_studio_save_failed)
+                    }
+                }
             }
             item {
                 ActionRow(stringResource(R.string.theme_studio_save), enabled = readable) {
@@ -262,46 +334,16 @@ private fun ActionRow(label: String, enabled: Boolean = true, onClick: () -> Uni
 }
 
 @Composable
-private fun ThemePreview(theme: ThemeDefinition) {
-    val c = theme.colors
-    Column(
-            modifier =
-                    Modifier.padding(horizontal = 24.dp)
-                            .fillMaxWidth()
-                            .background(Color(c.background), RoundedCornerShape(16.dp))
-                            .border(1.dp, Color(c.secondaryText).copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-                            .padding(20.dp)
-                            .testTag("theme_preview"),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Text(stringResource(R.string.theme_studio_preview_clock), color = Color(c.primaryText), fontSize = 44.sp)
-        Text(stringResource(R.string.theme_studio_preview_primary), color = Color(c.primaryText), fontSize = 20.sp)
-        Text(stringResource(R.string.theme_studio_preview_secondary), color = Color(c.secondaryText), fontSize = 16.sp)
-        Box(
-                Modifier.background(Color(c.surface), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-        ) {
-            Text(stringResource(R.string.theme_studio_preview_accent), color = Color(c.accent), fontSize = 14.sp)
-        }
-    }
-}
-
-@Composable
 private fun Swatches(theme: ThemeDefinition) {
     Box(
             Modifier.size(28.dp)
-                    .background(Color(theme.colors.background), RoundedCornerShape(8.dp))
+                    .background(theme.backgroundBrush(), RoundedCornerShape(8.dp))
                     .border(2.dp, Color(theme.colors.accent), RoundedCornerShape(8.dp))
     )
 }
 
 @Composable
 private fun ColorFieldRow(field: ThemeColorField, color: Int, onValid: (Int) -> Unit) {
-    var text by remember(field) { mutableStateOf(ThemeColorMath.toHex(color)) }
-    LaunchedEffect(color) {
-        if (ThemeColorMath.parseHex(text) != color) text = ThemeColorMath.toHex(color)
-    }
-    val parsed = ThemeColorMath.parseHex(text)
     val label =
             stringResource(
                     when (field) {
@@ -312,6 +354,16 @@ private fun ColorFieldRow(field: ThemeColorField, color: Int, onValid: (Int) -> 
                         ThemeColorField.SURFACE -> R.string.theme_studio_color_surface
                     }
             )
+    HexRow(label, color, "theme_color_${field.name}", onValid)
+}
+
+@Composable
+private fun HexRow(label: String, color: Int, tag: String, onValid: (Int) -> Unit) {
+    var text by remember(tag) { mutableStateOf(ThemeColorMath.toHex(color)) }
+    LaunchedEffect(color) {
+        if (ThemeColorMath.parseHex(text) != color) text = ThemeColorMath.toHex(color)
+    }
+    val parsed = ThemeColorMath.parseHex(text)
     Row24 {
         Box(Modifier.size(32.dp).background(Color(color), RoundedCornerShape(8.dp)))
         OutlinedTextField(
@@ -324,7 +376,7 @@ private fun ColorFieldRow(field: ThemeColorField, color: Int, onValid: (Int) -> 
                 isError = parsed == null,
                 supportingText = if (parsed == null) ({ Text(stringResource(R.string.theme_studio_color_invalid)) }) else null,
                 singleLine = true,
-                modifier = Modifier.weight(1f).padding(start = 12.dp).testTag("theme_color_${field.name}"),
+                modifier = Modifier.weight(1f).padding(start = 12.dp).testTag(tag),
         )
     }
 }

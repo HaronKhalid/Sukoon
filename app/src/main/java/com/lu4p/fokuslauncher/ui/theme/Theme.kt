@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import com.lu4p.fokuslauncher.theme.LocalThemeBackground
 import com.lu4p.fokuslauncher.theme.ThemeDefinition
+import com.lu4p.fokuslauncher.theme.backgroundBrush
 import com.lu4p.fokuslauncher.theme.withAppTheme
+import com.lu4p.fokuslauncher.theme.withThemeFeel
 import com.lu4p.fokuslauncher.theme.withAppThemeText
 import com.lu4p.fokuslauncher.ui.util.ProvideSystemClickSound
 
@@ -100,7 +102,7 @@ fun FokusLauncherTheme(
                                 effectiveStyle,
                                 glowEnabled,
                         )
-                if (appTheme != null) base.withAppThemeText(appTheme) else base
+                if (appTheme != null) base.withAppThemeText(appTheme).withThemeFeel(appTheme.style) else base
             }
     val resolvedIconScale =
             remember(fontScale) {
@@ -124,12 +126,12 @@ fun FokusLauncherTheme(
             LocalLauncherFontScale provides resolvedIconScale,
             LocalLauncherIconGlow provides iconGlow,
             LocalThemeBackground provides
-                    (appTheme?.let { Color(it.colors.background) } ?: Color.Black),
+                    (appTheme?.let { Color(it.representativeBackground) } ?: Color.Black),
     ) {
         ProvideSystemClickSound {
             MaterialTheme(colorScheme = colorScheme, typography = typography) {
                 if (appTheme != null && paintThemeBackground) {
-                    Box(Modifier.fillMaxSize().background(Color(appTheme.colors.background))) {
+                    Box(Modifier.fillMaxSize().background(appTheme.backgroundBrush())) {
                         content()
                     }
                 } else {

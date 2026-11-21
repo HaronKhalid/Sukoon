@@ -80,7 +80,7 @@ class ThemeCodecTest {
 
     @Test
     fun `future schema versions are rejected, not guessed`() {
-        assertTrue(failure(valid.replace("\"schemaVersion\":1", "\"schemaVersion\":2"))!!.contains("unsupported"))
+        assertTrue(failure(valid.replace("\"schemaVersion\":1", "\"schemaVersion\":3"))!!.contains("unsupported"))
         assertTrue(failure(valid.replace("\"schemaVersion\":1", "\"schemaVersion\":-1")) != null)
         assertTrue(failure(valid.replace("\"schemaVersion\":1", "\"schemaVersion\":\"1\"")) != null)
         assertTrue(failure(valid.replace("\"schemaVersion\":1", "\"schemaVersion\":1.5")) != null)

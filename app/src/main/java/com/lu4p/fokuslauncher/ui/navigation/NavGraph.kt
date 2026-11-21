@@ -127,6 +127,7 @@ object Routes {
     const val SETTINGS_PROFILE_NAMES = "settings_profile_names"
     const val SETTINGS_APPEARANCE = "settings_appearance"
     const val SETTINGS_THEME_STUDIO = "settings_theme_studio"
+    const val SETTINGS_STYLE_GALLERY = "settings_style_gallery"
     const val SETTINGS_WALLPAPER = "settings_wallpaper"
     const val SETTINGS_DRAWER_BEHAVIOR = "settings_drawer_behavior"
     const val SETTINGS_APPS_MANAGEMENT = "settings_apps_management"
@@ -217,6 +218,8 @@ fun FokusNavGraph(
         )
         return
     }
+
+    com.lu4p.fokuslauncher.ui.settings.StyleFirstRunSheet()
 
     val navController = rememberNavController()
     var showDrawer by remember { mutableStateOf(false) }
@@ -828,6 +831,9 @@ fun FokusNavGraph(
                     onOpenThemeStudio = {
                         navController.navigateSingleTop(Routes.SETTINGS_THEME_STUDIO)
                     },
+                    onOpenStyleGallery = {
+                        navController.navigateSingleTop(Routes.SETTINGS_STYLE_GALLERY)
+                    },
                     onOpenWallpaper = {
                         navController.navigateSingleTop(Routes.SETTINGS_WALLPAPER)
                     },
@@ -844,6 +850,12 @@ fun FokusNavGraph(
                         navController.navigateSingleTop(Routes.SETTINGS_FOCUS)
                     },
                     backgroundScrim = com.lu4p.fokuslauncher.theme.themedSettingsScrim
+                )
+            }
+
+            fokusSettingsComposable(Routes.SETTINGS_STYLE_GALLERY) {
+                com.lu4p.fokuslauncher.ui.settings.StyleGalleryScreen(
+                        onNavigateBack = { navController.popBackStack() },
                 )
             }
 

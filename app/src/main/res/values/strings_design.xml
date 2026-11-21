@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_section_customize">Customize</string>
+    <string name="style_gallery_title">Style Gallery</string>
+    <string name="style_gallery_subtitle">Swipe through complete looks and tap one to apply</string>
+    <string name="style_gallery_hint">Tap a look to apply its theme, layout and clock in one go.</string>
+    <string name="style_gallery_applied">Applied</string>
+    <string name="style_gallery_applied_toast">%1$s applied</string>
+    <string name="style_gallery_empty">No styles match this filter.</string>
+    <string name="style_filter_all">All</string>
+    <string name="style_filter_dark">Dark</string>
+    <string name="style_filter_light">Light</string>
+    <string name="style_filter_colourful">Colourful</string>
+    <string name="style_filter_minimal">Minimal</string>
+    <string name="style_first_run_title">Choose your style</string>
+    <string name="style_first_run_message">Pick a look for your home screen. You can change it any time in Settings.</string>
+    <string name="style_first_run_skip">Skip for now</string>
+    <string name="style_preview_date">Saturday, 21 November</string>
+    <string name="style_preview_app_phone">Phone</string>
+    <string name="style_preview_app_messages">Messages</string>
+    <string name="style_preview_app_camera">Camera</string>
+    <string name="style_preview_app_notes">Notes</string>
+    <string name="style_preview_app_music">Music</string>
+    <string name="style_preview_battery">Battery 82%</string>
+    <string name="style_preview_focus">Focus 25:00</string>
+    <string name="style_preview_word_clock">It is nearly\nten to ten</string>
+    <string name="style_preview_minimal_text">nine forty-one</string>
+    <string name="theme_studio_section_gradient">Gradient background</string>
+    <string name="theme_studio_gradient_enable">Use a gradient</string>
+    <string name="theme_studio_gradient_stop">Stop %1$d</string>
+    <string name="theme_studio_gradient_add_stop">Add a third colour</string>
+    <string name="theme_studio_gradient_remove_stop">Remove third colour</string>
+    <string name="theme_studio_gradient_angle">Direction</string>
+    <string name="theme_studio_gradient_angle_value">%1$d°</string>
+    <string name="theme_studio_duplicate">Duplicate as custom theme</string>
+    <string name="theme_studio_classic_name">Classic (Fokus-like)</string>
+    <string name="theme_studio_classic_subtitle">The original look over your wallpaper</string>
+</resources>
