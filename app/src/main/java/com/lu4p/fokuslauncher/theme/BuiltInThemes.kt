@@ -121,13 +121,55 @@ object BuiltInThemes {
             listOf("#1B120D", "#3A261B"), 180, "#F6EBDD", "#C2A98F", "#E0A96D", "#2C1D14",
             ThemeStyle("split-accent", "DEFAULT", 500, 0.0f))
 
+    // ---- Backdrop themes: each pairs a procedural backdrop with matching colours ----------------
+
+    private fun backdropTheme(
+            id: String, name: String, dark: Boolean, stops: List<String>, primary: String, secondary: String,
+            accent: String, surface: String, backdrop: String, face: String, preset: String,
+            weight: Int = 400, spacing: Float = 0f,
+    ) = gradientTheme(id, name, if (dark) ThemeAppearance.DARK else ThemeAppearance.LIGHT, stops, 180,
+            primary, secondary, accent, surface,
+            ThemeStyle(face, preset, weight, spacing, backdrop = backdrop))
+
+    val DuskBloom = backdropTheme("dusk-bloom", "Dusk Bloom", true, listOf("#140B2E", "#2B1250"), "#F6F0FF", "#BFB0E0",
+            "#FF8FC0", "#2A1850", "blobs-dusk", "stacked", "AESTHETIC", 300, 0.02f)
+    val PeachBloom = backdropTheme("peach-bloom", "Peach Bloom", false, listOf("#FFF1E8", "#FFDCCF"), "#3A1F1A", "#7A5048",
+            "#C2410C", "#FFD9C8", "blobs-peach", "minimal-text", "AESTHETIC", 400, 0.01f)
+    val DuneGlow = backdropTheme("dune-glow", "Dune Glow", true, listOf("#1F1030", "#3A1A38"), "#FFF1E6", "#F0C4B0",
+            "#FFB067", "#3A1A3A", "dunes-sunset", "split-accent", "AESTHETIC", 400, 0.01f)
+    val SandDune = backdropTheme("sand-dune", "Sand Dune", false, listOf("#F8E8CC", "#F3DDB5"), "#2E200F", "#5E4A2C",
+            "#9A4A12", "#EBD3A6", "dunes-sand", "classic-digital", "DEFAULT", 400, 0f)
+    val DuskRidge = backdropTheme("dusk-ridge", "Dusk Ridge", true, listOf("#1B1840", "#2A2158"), "#F4F0FF", "#B8B0DC",
+            "#FFB38A", "#2A2458", "ridges-dusk", "analog-minimal", "AESTHETIC", 300, 0.02f)
+    val MistRidge = backdropTheme("mist-ridge", "Mist Ridge", true, listOf("#0E2A2A", "#16383A"), "#EAF6F2", "#9FC4BB",
+            "#8EE0C0", "#1B3A3A", "ridges-mist", "stacked", "PURE_MINIMAL", 300, 0.02f)
+    val CityLights = backdropTheme("city-lights", "City Lights", true, listOf("#0B0B2A", "#1A1240"), "#F7F2FF", "#B5A8D8",
+            "#FFD27A", "#1E1646", "city-glow", "outline-bold", "FOCUS", 500, 0.03f)
+    val DawnCity = backdropTheme("dawn-city", "Dawn City", true, listOf("#121C3A", "#1C2850"), "#F2F6FF", "#A9B8DA",
+            "#FFB98A", "#1E2A52", "city-dawn", "classic-digital", "INFORMATION", 400, 0.01f)
+    val StarField = backdropTheme("star-field", "Star Field", true, listOf("#02030A", "#0B1030"), "#F2F5FF", "#A0AAD0",
+            "#9FC0FF", "#101638", "starfield", "minimal-text", "PURE_MINIMAL", 300, 0.04f)
+    val AuroraVeil = backdropTheme("aurora-veil", "Aurora Veil", true, listOf("#040B1A", "#0A2030"), "#EFFAF8", "#9CC4C0",
+            "#5CF0B8", "#0C2430", "aurora-ribbons", "split-accent", "AESTHETIC", 300, 0.02f)
+    val RoseWash = backdropTheme("rose-wash", "Rose Wash", false, listOf("#FBF1F0", "#F8E4E4"), "#3A1F2A", "#7A5563",
+            "#B02A5A", "#F5D9DF", "wash-rose", "word-clock", "AESTHETIC", 400, 0.02f)
+    val OceanWash = backdropTheme("ocean-wash", "Ocean Wash", false, listOf("#EEF6F8", "#DDEBF2"), "#10303C", "#44687A",
+            "#0E6E94", "#D2E6EE", "wash-ocean", "analog-ticks", "DEFAULT", 400, 0f)
+    val PaperFibre = backdropTheme("paper-fibre", "Paper Fibre", false, listOf("#F6F0E4", "#EFE6D4"), "#1F1E1B", "#5E5A50",
+            "#2F5D8A", "#EADFC8", "paper-grain", "minimal-text", "PURE_MINIMAL", 400, 0f)
+    val SlateGrain = backdropTheme("slate-grain", "Slate Grain", true, listOf("#1C2028", "#2A303C"), "#EEF1F6", "#A8B2C4",
+            "#8FB4FF", "#2A303C", "grain-slate", "classic-digital", "INFORMATION", 400, 0f)
+
+    val backdropThemes: List<ThemeDefinition> = listOf(DuskBloom, PeachBloom, DuneGlow, SandDune, DuskRidge,
+            MistRidge, CityLights, DawnCity, StarField, AuroraVeil, RoseWash, OceanWash, PaperFibre, SlateGrain)
+
     /** Sukoon's own first-run look. */
     val SukoonDefault: ThemeDefinition = Aurora
 
     val all: List<ThemeDefinition> =
             listOf(AmoledBlack, MidnightNavy, Cream, Monochrome, Nature, Ocean, SoftPastel, Custom,
                     Aurora, SunsetDunes, RoseQuartz, ForestMist, DesertSand, LavenderDusk, Graphite,
-                    Paper, Mint, OceanDeep, NeonNight, Sakura, SlateBlue, Coffee)
+                    Paper, Mint, OceanDeep, NeonNight, Sakura, SlateBlue, Coffee) + backdropThemes
 
     /** Selecting this id means "keep the legacy Fokus look" (no theme applied). */
     const val ID_CLASSIC = "classic"
@@ -137,7 +179,7 @@ object BuiltInThemes {
 
     /** Gallery order: originals first, then the original eight (Custom is a template, not a style). */
     val gallery: List<ThemeDefinition> =
-            listOf(Aurora, SunsetDunes, RoseQuartz, ForestMist, DesertSand, LavenderDusk, Graphite, Paper,
+            backdropThemes + listOf(Aurora, SunsetDunes, RoseQuartz, ForestMist, DesertSand, LavenderDusk, Graphite, Paper,
                     Mint, OceanDeep, NeonNight, Sakura, SlateBlue, Coffee,
                     AmoledBlack, MidnightNavy, Cream, Monochrome, Nature, Ocean, SoftPastel)
 

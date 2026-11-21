@@ -141,6 +141,13 @@ fun FokusLauncherTheme(
               ProvideTextStyle(typography.bodyLarge.copy(color = Color.Unspecified)) {
                 if (appTheme != null && paintThemeBackground) {
                     Box(Modifier.fillMaxSize().background(appTheme.backgroundBrush())) {
+                        // Procedural backdrop (photo wallpapers never reach here, they skip the theme background).
+                        if (appTheme.style.backdrop.isNotEmpty()) {
+                            com.lu4p.fokuslauncher.backdrop.BackdropLayer(
+                                    appTheme.style.backdrop,
+                                    intensity = appTheme.style.backdropIntensity,
+                            )
+                        }
                         content()
                     }
                 } else {

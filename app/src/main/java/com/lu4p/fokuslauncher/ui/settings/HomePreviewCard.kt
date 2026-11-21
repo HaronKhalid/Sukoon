@@ -52,13 +52,17 @@ fun HomePreviewCard(
         layoutPreset: String = theme.style.layoutPreset,
         selected: Boolean = false,
         cornerRadius: Dp = 22.dp,
+        backdrop: String = theme.style.backdrop,
+        backdropIntensity: Float = theme.style.backdropIntensity,
+        /** Overrides the launcher font family (the editor previews a font before it is saved). */
+        fontFamily: androidx.compose.ui.text.font.FontFamily? = null,
 ) {
     val c = theme.colors
     val primary = Color(c.primaryText)
     val secondary = Color(c.secondaryText)
     val accent = Color(c.accent)
     val face = com.lu4p.fokuslauncher.theme.ClockFaces.resolve(clockFaceId)
-    val family = MaterialTheme.typography.bodyMedium.fontFamily
+    val family = fontFamily ?: MaterialTheme.typography.bodyMedium.fontFamily
     val weight = if (theme.style.fontWeight == 0) FontWeight.Normal else FontWeight(theme.style.fontWeight)
     val spacing = theme.style.letterSpacingEm.em
     fun ts(size: Int, w: FontWeight = weight, color: Color = primary) =
@@ -79,6 +83,7 @@ fun HomePreviewCard(
                                     shape,
                             )
     ) {
+        if (backdrop.isNotEmpty()) com.lu4p.fokuslauncher.backdrop.BackdropLayer(backdrop, intensity = backdropIntensity)
         Column(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 22.dp),
                 horizontalAlignment = hAlign,

@@ -128,6 +128,7 @@ object Routes {
     const val SETTINGS_APPEARANCE = "settings_appearance"
     const val SETTINGS_THEME_STUDIO = "settings_theme_studio"
     const val SETTINGS_STYLE_GALLERY = "settings_style_gallery"
+    const val SETTINGS_HOME_EDITOR = "settings_home_editor"
     const val SETTINGS_WALLPAPER = "settings_wallpaper"
     const val SETTINGS_DRAWER_BEHAVIOR = "settings_drawer_behavior"
     const val SETTINGS_APPS_MANAGEMENT = "settings_apps_management"
@@ -837,6 +838,9 @@ fun FokusNavGraph(
                     onOpenStyleGallery = {
                         navController.navigateSingleTop(Routes.SETTINGS_STYLE_GALLERY)
                     },
+                    onOpenHomeEditor = {
+                        navController.navigateSingleTop(Routes.SETTINGS_HOME_EDITOR)
+                    },
                     onOpenWallpaper = {
                         navController.navigateSingleTop(Routes.SETTINGS_WALLPAPER)
                     },
@@ -862,6 +866,17 @@ fun FokusNavGraph(
             fokusSettingsComposable(Routes.SETTINGS_STYLE_GALLERY) {
                 com.lu4p.fokuslauncher.ui.settings.StyleGalleryScreen(
                         onNavigateBack = { navController.popBackStack() },
+                        onCustomize = { navController.navigateSingleTop(Routes.SETTINGS_HOME_EDITOR) },
+                )
+            }
+
+            fokusSettingsComposable(Routes.SETTINGS_HOME_EDITOR) {
+                com.lu4p.fokuslauncher.ui.editor.HomeEditorScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onOpenLayoutStudio = { navController.navigateSingleTop(Routes.SETTINGS_LAYOUT_STUDIO) },
+                        onOpenNoteAppearance = { navController.navigateSingleTop(Routes.SETTINGS_NOTE_APPEARANCE) },
+                        onOpenWallpaper = { navController.navigateSingleTop(Routes.SETTINGS_WALLPAPER) },
+                        onOpenThemeStudio = { navController.navigateSingleTop(Routes.SETTINGS_THEME_STUDIO) },
                 )
             }
 

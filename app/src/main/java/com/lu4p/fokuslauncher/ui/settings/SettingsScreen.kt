@@ -64,6 +64,7 @@ fun SettingsScreen(
         onOpenGesturesSettings: () -> Unit = {},
         onOpenThemeStudio: () -> Unit = {},
         onOpenStyleGallery: () -> Unit = {},
+        onOpenHomeEditor: () -> Unit = {},
         onOpenWallpaper: () -> Unit = {},
         onOpenNotesSettings: () -> Unit = {},
         onOpenRemindersSettings: () -> Unit = {},
@@ -107,6 +108,7 @@ fun SettingsScreen(
                 onOpenGesturesSettings = onOpenGesturesSettings,
                 onOpenThemeStudio = onOpenThemeStudio,
                 onOpenStyleGallery = onOpenStyleGallery,
+                onOpenHomeEditor = onOpenHomeEditor,
                 onOpenWallpaper = onOpenWallpaper,
                 onOpenNotesSettings = onOpenNotesSettings,
                 onOpenRemindersSettings = onOpenRemindersSettings,
@@ -145,6 +147,7 @@ private fun SettingsHubContent(
         onOpenGesturesSettings: () -> Unit,
         onOpenThemeStudio: () -> Unit,
         onOpenStyleGallery: () -> Unit,
+        onOpenHomeEditor: () -> Unit,
         onOpenWallpaper: () -> Unit,
         onOpenNotesSettings: () -> Unit,
         onOpenRemindersSettings: () -> Unit,
@@ -232,6 +235,16 @@ private fun SettingsHubContent(
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item { SectionHeader(stringResource(R.string.settings_section_customize)) }
+        item {
+            SettingsRow(
+                    label = stringResource(R.string.settings_customize_home),
+                    subtitle = stringResource(R.string.settings_customize_home_subtitle),
+                    verticalPadding = 14.dp,
+                    onClick = onOpenHomeEditor,
+                    trailing = { SubpageChevron() },
+                    modifier = Modifier.testTag("settings_customize_home"),
+            )
+        }
         item {
             SettingsRow(
                     label = stringResource(R.string.style_gallery_title),

@@ -114,3 +114,34 @@ class DesignThemesTest {
 }
 
 private typealias ParseFail = ThemeParseResult.Failure
+
+class BackdropCodecTest {
+    @Test
+    fun `theme without backdrop encodes with no backdrop keys and round trips`() {
+        val json = ThemeCodec.encode(BuiltInThemes.Aurora)
+        org.junit.Assert.assertFalse(json.contains("backdrop"))
+        val back = (ThemeCodec.decode(json) as ThemeParseResult.Success).theme
+        org.junit.Assert.assertEquals("", back.style.backdrop)
+        org.junit.Assert.assertEquals(1f, back.style.backdropIntensity, 0f)
+    }
+
+    @Test
+    fun `backdrop and intensity round trip`() {
+        val t = BuiltInThemes.DuneGlow.copy(style = BuiltInThemes.DuneGlow.style.copy(backdropIntensity = 0.6f))
+        val back = (ThemeCodec.decode(ThemeCodec.encode(t)) as ThemeParseResult.Success).theme
+        org.junit.Assert.assertEquals("dunes-sunset", back.style.backdrop)
+        org.junit.Assert.assertEquals(0.6f, back.style.backdropIntensity, 0.001f)
+    }
+
+    @Test
+    fun `old v2 json without backdrop still decodes and bad backdrop values are rejected`() {
+        val base = """{"schemaVersion":2,"id":"a","name":"A","appearance":"dark",
+            "colors":{"background":"#000000","primaryText":"#FFFFFF","secondaryText":"#999999","accent":"#FFFFFF"},
+            "style":{"clockFaceId":"stacked","layoutPreset":"FOCUS","fontWeight":400,"letterSpacingEm":0.01}}"""
+        org.junit.Assert.assertTrue(ThemeCodec.decode(base) is ThemeParseResult.Success)
+        fun withStyle(extra: String) = base.replace("\"letterSpacingEm\":0.01", "\"letterSpacingEm\":0.01,$extra")
+        org.junit.Assert.assertTrue(ThemeCodec.decode(withStyle("\"backdrop\":\"starfield\",\"backdropIntensity\":0.5")) is ThemeParseResult.Success)
+        org.junit.Assert.assertTrue(ThemeCodec.decode(withStyle("\"backdrop\":\"Bad Id!\"")) is ThemeParseResult.Failure)
+        org.junit.Assert.assertTrue(ThemeCodec.decode(withStyle("\"backdropIntensity\":3")) is ThemeParseResult.Failure)
+    }
+}
