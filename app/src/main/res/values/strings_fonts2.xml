@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fonts_honest_note">Applies everywhere inside Sukoon. Android does not let launchers change other apps\' fonts; where your phone offers a system font style, you can change it in your phone\'s display settings.</string>
+    <string name="fonts_app_font_heading">App font</string>
+    <string name="fonts_preview_heading">Preview</string>
+    <string name="fonts_preview_sample">Sukoon - سکون - Calm 123</string>
+    <string name="fonts_preview_sentence">The quick brown fox. دل کو سکون ملتا ہے</string>
+    <string name="fonts_default_font">System default</string>
+    <string name="fonts_import_button">Import your own font</string>
+    <string name="fonts_import_hint">Pick a .ttf or .otf file. It is copied into Sukoon\'s private storage and stays on this device.</string>
+    <string name="fonts_imported_label">Imported: %1$s</string>
+    <string name="fonts_remove_imported">Remove imported font</string>
+    <string name="fonts_import_ok">Imported %1$s</string>
+    <string name="fonts_import_failed">That file is not a usable font.</string>
+    <string name="fonts_import_too_large">That font file is too large.</string>
+    <string name="fonts_removed">Imported font removed</string>
+    <string name="fonts_line_boost_heading">Line height for Nastaliq</string>
+    <string name="fonts_line_boost_auto">Auto</string>
+    <string name="fonts_line_boost_on">Always</string>
+    <string name="fonts_line_boost_off">Off</string>
+    <string name="fonts_line_boost_hint">Nastaliq letters are tall. Auto adds extra line height only for Nastaliq fonts so nothing is clipped.</string>
+    <string name="fonts_elements_heading">Override for one element</string>
+    <string name="fonts_licence_import_note">Jameel Noori Nastaleeq is not bundled because its licence is unconfirmed. Import your own copy with the button above.</string>
+
+    <string name="notes_appearance_title">Home note appearance</string>
+    <string name="notes_appearance_open">Home note appearance</string>
+    <string name="notes_appearance_subtitle">Look of the note on your home screen</string>
+    <string name="notes_preview">Live preview</string>
+    <string name="notes_card_style">Card style</string>
+    <string name="notes_card_plain">Plain</string>
+    <string name="notes_card_filled">Filled card</string>
+    <string name="notes_card_outlined">Outlined</string>
+    <string name="notes_card_sticky">Sticky note</string>
+    <string name="notes_bg_opacity">Background opacity %1$d%%</string>
+    <string name="notes_corner_radius">Corner radius %1$d dp</string>
+    <string name="notes_border">Border</string>
+    <string name="notes_border_color">Border colour</string>
+    <string name="notes_width_scale">Width %1$d%% of the screen</string>
+    <string name="notes_height_scale">Height scale %1$d%%</string>
+    <string name="notes_apply_all">Apply text style to all notes</string>
+    <string name="notes_reset_style">Reset to default</string>
+    <string name="notes_applied_all">Applied to all notes</string>
+    <string name="notes_on_off_on">On</string>
+    <string name="notes_on_off_off">Off</string>
+    <string name="notes_home_edit">Edit note</string>
+    <string name="notes_home_switch">Switch pinned note</string>
+    <string name="notes_home_appearance">Appearance</string>
+    <string name="notes_home_unpin">Remove from home</string>
+    <string name="notes_sample_title">Welcome to Sukoon</string>
+    <string name="notes_sample_body">This note lives on your home screen. Long-press it to edit, restyle or remove it. سکون کے ساتھ خوش آمدید</string>
+</resources>

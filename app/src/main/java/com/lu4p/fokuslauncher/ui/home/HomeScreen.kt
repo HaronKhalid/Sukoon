@@ -767,6 +767,7 @@ private fun HomeWidgetsSection(
                     val noteTop = layoutPad(16, element.spacing, rendered)
                     ScaledText(element.size.scale) {
                         HomePinnedNoteOr(
+                            fallbackIsEmpty = noteUiState.text.isBlank(),
                             modifier = Modifier.fillMaxWidth().layoutId(HomeContentSlot.Note)
                                 .padding(top = noteTop),
                         ) {

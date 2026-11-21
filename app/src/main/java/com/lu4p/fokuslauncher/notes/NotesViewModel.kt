@@ -29,6 +29,7 @@ class NotesViewModel
 constructor(
         private val repository: NoteRepository,
         val fontCache: FontFamilyCache,
+        private val widgetPreferences: NoteWidgetPreferences,
         private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -71,7 +72,7 @@ constructor(
 
     fun newNote() {
         viewModelScope.launch {
-            val id = repository.create()
+            val id = repository.create(widgetPreferences.style().appearance)
             open(id)
         }
     }

@@ -101,3 +101,11 @@ Added package `home/layout` (model, presets, codec, repository, ViewModel, `Conf
 - Schedules are evaluated only in `MainActivity.onResume` (no service, no alarms). A user switch-off is respected until the schedule window ends.
 - UI: Settings > Focus, with the notice that hiding only affects this launcher. Strings are in `strings_focus.xml`.
 - Not done: focus keys are not in configuration backups; times are stepped in 30-minute taps (no time picker); private-space drawer apps are not filtered.
+
+## Fonts and home note (feat/fonts-notes, 2026-11-21)
+- Root cause of "font does nothing": the Fonts screen only wrote per-element overrides (clock/date/app labels/notes) whose default is "same as launcher font", the real launcher-wide font lived in Appearance and could not use bundled fonts, and a bare `Text()` reads `LocalTextStyle`, which `MaterialTheme` never sets, so unstyled text kept the system font.
+- `FokusLauncherTheme` now wraps content in `ProvideTextStyle(bodyLarge)` (colour left to `LocalContentColor`) and takes `lineHeightBoost`; `MainActivity` resolves the app font through the cached `FontFamilyCache` (bundled, imported, system; safe fallback).
+- Fonts screen: honest scope note, live preview (English, Urdu, mixed), app font list (bundled + imported + system), SAF import with magic-byte validation (`FontImportValidator`) plus Typeface load check, remove, Nastaliq line-height boost (Auto/Always/Off, `FontPolicy`), per-element overrides. App font reuses `launcher_font_family` so it is in configuration backup; per-element keys and boost mode are not (documented).
+- Home note: `NoteWidgetStyle` (global default, DataStore `note_widget_preferences`, versioned text codec, clamped) + `NoteCardView` (plain/filled/outlined/sticky, opacity, radius, border, width 50-200% = 25-100% of screen, height scale) shared by home and the live preview in `NoteAppearanceScreen` (route `settings_note_appearance`, reached from Notes and the home note menu).
+- Home note tap/long-press menu: edit, switch pinned note, appearance, remove from home, delete. The placeholder is replaced by a one-time editable sample note (seeded once, deletable). New notes start from the global default; "apply to all notes" available. No Room schema change.
+- Acknowledgement/doc wording corrected (history is not preserved here; original history is upstream).

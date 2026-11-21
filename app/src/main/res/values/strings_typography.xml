@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="typography_settings_title">Fonts</string>
-    <string name="typography_settings_subtitle">Choose a font for the clock, date, app names and notes</string>
-    <string name="typography_scope_note">These fonts apply inside Sukoon only. Android does not allow a launcher to change the system font of other apps.</string>
+    <string name="typography_settings_subtitle">One app font for all of Sukoon, plus optional per-element fonts</string>
     <string name="typography_element_clock">Clock</string>
     <string name="typography_element_date">Date</string>
     <string name="typography_element_app_labels">App names</string>
     <string name="typography_element_notes">Notes</string>
-    <string name="typography_follow_launcher">Same as launcher font</string>
+    <string name="typography_follow_launcher">Same as app font</string>
     <string name="typography_system_sans">System sans-serif</string>
     <string name="typography_system_serif">System serif</string>
     <string name="typography_system_monospace">System monospace</string>

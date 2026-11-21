@@ -6,7 +6,7 @@
     <string name="about_ack_intro">Sukoon is free software, released under the GNU General Public License v3.0. It is a derivative of Fokus Launcher.</string>
     <string name="about_ack_section_upstream">Upstream project</string>
     <string name="about_ack_fokus_title">Fokus Launcher</string>
-    <string name="about_ack_fokus_body">Sukoon is built on Fokus Launcher by Paul Scheduikat and contributors. Licence: GPL-3.0. Upstream copyright notices and history are preserved.</string>
+    <string name="about_ack_fokus_body">Sukoon is built on Fokus Launcher by Paul Scheduikat and contributors. Licence: GPL-3.0. Sukoon began as a modified copy of Fokus Launcher 1.9.8. Upstream copyright notices, AUTHORS and the licence are kept; the original history lives in the upstream repository.</string>
     <string name="about_ack_section_reference">Reference and inspiration</string>
     <string name="about_ack_victoria_title">Victoria Launcher</string>
     <string name="about_ack_victoria_body">Studied as a reference and for inspiration only. Licence: GPL-3.0-or-later. No Victoria Launcher code is included in this version.</string>

@@ -43,6 +43,9 @@ constructor(@param:ApplicationContext private val context: Context) {
         return TtfFontMetadataReader.readFamilyDisplayName(file)
     }
 
+    /** File name of the stored font, if any. */
+    fun activeFileName(): String? = activeFontFile()?.name
+
     fun resolveFile(storageValue: String): File? {
         val relative = LauncherFontPreferences.customFontRelativePath(storageValue) ?: return null
         val file = File(fontsDir, relative)
@@ -80,7 +83,11 @@ constructor(@param:ApplicationContext private val context: Context) {
                     target.delete()
                     return@withContext CustomFontImportResult.Failure(CustomFontImportFailure.IO_ERROR)
                 }
-                if (!isValidTtfFile(target)) {
+                val header = runCatching { target.inputStream().use { it.readNBytes(4) } }.getOrDefault(ByteArray(0))
+                if (com.lu4p.fokuslauncher.typography.FontImportValidator.validate(header, target.length()) !=
+                        com.lu4p.fokuslauncher.typography.FontImportValidator.Result.OK ||
+                        !isValidTtfFile(target)
+                ) {
                     target.delete()
                     return@withContext CustomFontImportResult.Failure(
                             CustomFontImportFailure.INVALID_FONT

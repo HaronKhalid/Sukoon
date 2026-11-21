@@ -5,6 +5,8 @@ import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.ProvideTextStyle
+import com.lu4p.fokuslauncher.typography.withLineHeightBoost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -83,6 +85,8 @@ fun FokusLauncherTheme(
         appTheme: ThemeDefinition? = null,
         /** Paint the theme background behind content (false over a photo wallpaper). */
         paintThemeBackground: Boolean = true,
+        /** Extra line height for tall scripts such as Nastaliq (1 = none). */
+        lineHeightBoost: Float = 1f,
         content: @Composable () -> Unit
 ) {
     val effectiveStyle = if (appTheme != null) LauncherVisualStyle.CLASSIC else visualStyle
@@ -92,7 +96,7 @@ fun FokusLauncherTheme(
                 if (appTheme != null) base.withAppTheme(appTheme) else base
             }
     val typography =
-            remember(fontFamily, fontScale, effectiveStyle, glowEnabled, appTheme) {
+            remember(fontFamily, fontScale, effectiveStyle, glowEnabled, appTheme, lineHeightBoost) {
                 val base =
                         fokusTypographyForLauncher(
                                 fontFamily,
@@ -100,7 +104,8 @@ fun FokusLauncherTheme(
                                 effectiveStyle,
                                 glowEnabled,
                         )
-                if (appTheme != null) base.withAppThemeText(appTheme) else base
+                (if (appTheme != null) base.withAppThemeText(appTheme) else base)
+                        .withLineHeightBoost(lineHeightBoost)
             }
     val resolvedIconScale =
             remember(fontScale) {
@@ -128,6 +133,10 @@ fun FokusLauncherTheme(
     ) {
         ProvideSystemClickSound {
             MaterialTheme(colorScheme = colorScheme, typography = typography) {
+              // A bare Text() reads LocalTextStyle, which MaterialTheme does not set, so it kept
+              // the system font. Provide the themed body style (colour left to LocalContentColor)
+              // so every Text/TextField/dialog/sheet picks up the app font without call changes.
+              ProvideTextStyle(typography.bodyLarge.copy(color = Color.Unspecified)) {
                 if (appTheme != null && paintThemeBackground) {
                     Box(Modifier.fillMaxSize().background(Color(appTheme.colors.background))) {
                         content()
@@ -135,6 +144,7 @@ fun FokusLauncherTheme(
                 } else {
                     content()
                 }
+              }
             }
         }
     }

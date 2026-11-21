@@ -28,7 +28,7 @@ fun noteTextStyle(
             fontSize = a.fontSizeSp.sp,
             fontWeight = FontWeight(a.fontWeight),
             color = if (a.textColor == 0) defaultColor else Color(a.textColor),
-            lineHeight = (a.fontSizeSp * a.lineSpacing).sp,
+            lineHeight = (a.fontSizeSp * a.lineSpacing * lineBoost(a)).sp,
             textAlign =
                     when (a.alignment) {
                         NoteAlignment.START -> TextAlign.Start
@@ -43,3 +43,11 @@ fun noteTextStyle(
                     ),
     )
 }
+
+/** Extra line height for Nastaliq note fonts (bundled Nastaliq); 1 for everything else. */
+internal fun lineBoost(a: NoteAppearance): Float =
+        com.lu4p.fokuslauncher.typography.FontPolicy.lineHeightBoost(
+                a.fontFamily,
+                null,
+                com.lu4p.fokuslauncher.typography.LineBoostMode.AUTO,
+        )

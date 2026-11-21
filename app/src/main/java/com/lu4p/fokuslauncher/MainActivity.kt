@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -48,6 +49,12 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var customFontStore: CustomFontStore
+
+    @Inject
+    lateinit var fontFamilyCache: com.lu4p.fokuslauncher.typography.FontFamilyCache
+
+    @Inject
+    lateinit var typographyPreferences: com.lu4p.fokuslauncher.typography.TypographyPreferences
 
     @Inject
     lateinit var themeStore: com.lu4p.fokuslauncher.theme.ThemeStore
@@ -115,16 +122,27 @@ class MainActivity : AppCompatActivity() {
             val appTheme by produceState<com.lu4p.fokuslauncher.theme.ThemeDefinition?>(null) {
                 themeStore.appliedTheme.collect { value = it }
             }
+            val lineBoostMode by produceState(com.lu4p.fokuslauncher.typography.LineBoostMode.AUTO) {
+                typographyPreferences.lineBoostModeFlow.collect { value = it }
+            }
             val appLocaleTag by produceState("") {
                 preferencesManager.appLocaleTagFlow.collect { value = it }
             }
             ProvideAppLocale(localeTag = appLocaleTag) {
                 val wallpaperIsPhoto = launcherAppearance.usesPhotoWallpaper
                 FokusLauncherTheme(
-                        fontFamily =
-                                composeFontFamilyFromStoredName(launcherFontFamilyName) {
-                                    customFontStore.resolveFile(it)
-                                },
+                        // Cached resolution: supports bundled, imported and system fonts and
+                        // falls back to the system font if anything fails to load.
+                        fontFamily = remember(launcherFontFamilyName) {
+                            fontFamilyCache.familyFor(launcherFontFamilyName)
+                        },
+                        lineHeightBoost = remember(launcherFontFamilyName, lineBoostMode) {
+                            com.lu4p.fokuslauncher.typography.FontPolicy.lineHeightBoost(
+                                    launcherFontFamilyName,
+                                    customFontStore.readStoredFontDisplayLabel(),
+                                    lineBoostMode,
+                            )
+                        },
                         fontScale = launcherFontScale,
                         visualStyle =
                                 if (wallpaperIsPhoto) LauncherVisualStyle.CLASSIC

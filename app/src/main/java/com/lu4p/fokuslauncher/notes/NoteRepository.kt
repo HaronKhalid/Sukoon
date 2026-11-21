@@ -60,4 +60,19 @@ class NoteRepository(private val dao: NoteDao, private val clock: () -> Long) {
         val existing = dao.get(id) ?: return
         if (existing.pinned) dao.upsert(existing.copy(pinned = false))
     }
+
+    suspend fun count(): Int = dao.getAll().size
+
+    /** Applies [appearance] to every note's text look (the pinned one included). */
+    suspend fun applyAppearanceToAll(appearance: NoteAppearance) {
+        dao.getAll().forEach { dao.upsert(it.withAppearance(appearance)) }
+    }
+
+    /** Creates the editable sample note, pinned to home. Returns its id. */
+    suspend fun createPinned(title: String, body: String, appearance: NoteAppearance): Long {
+        val id = create(appearance)
+        saveText(id, title, body)
+        pin(id)
+        return id
+    }
 }

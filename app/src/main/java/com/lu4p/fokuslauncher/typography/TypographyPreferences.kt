@@ -27,6 +27,17 @@ constructor(@param:ApplicationContext private val context: Context) {
                 TextElement.entries.associateWith { prefs[key(it)].orEmpty() }
             }
 
+    private val boostKey = stringPreferencesKey("line_boost_mode")
+
+    val lineBoostModeFlow: Flow<LineBoostMode> =
+            context.typographyDataStore.data.map { FontPolicy.boostModeFromStorage(it[boostKey]) }
+
+    suspend fun setLineBoostMode(mode: LineBoostMode) {
+        context.typographyDataStore.edit { prefs ->
+            if (mode == LineBoostMode.AUTO) prefs.remove(boostKey) else prefs[boostKey] = mode.name
+        }
+    }
+
     suspend fun setFont(element: TextElement, storageValue: String) {
         context.typographyDataStore.edit { prefs ->
             if (storageValue.isEmpty()) prefs.remove(key(element))
