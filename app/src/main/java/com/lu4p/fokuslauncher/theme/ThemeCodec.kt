@@ -20,7 +20,7 @@ object ThemeCodec {
 
     /** Steps keyed by the version they upgrade FROM; each yields a map at version + 1. */
     internal val migrations: Map<Int, (Map<String, Any?>) -> Map<String, Any?>> =
-            mapOf(0 to ::migrateV0ToV1)
+            mapOf(0 to ::migrateV0ToV1, 1 to ::migrateV1ToV2)
 
     /**
      * v0 was the pre-release layout: `mode` instead of `appearance`, and `colors.text` /
@@ -39,6 +39,9 @@ object ThemeCodec {
         out["schemaVersion"] = 1L
         return out
     }
+
+    /** v2 only adds the optional `gradient` and `style` objects, so v1 data carries over unchanged. */
+    private fun migrateV1ToV2(m: Map<String, Any?>): Map<String, Any?> = m + ("schemaVersion" to 2L)
 
     internal fun migrateToCurrent(
             map: Map<String, Any?>,
@@ -106,7 +109,15 @@ object ThemeCodec {
         val surface =
                 if (c["surface"] == null) ThemeColorMath.blend(primary, background, 0.08)
                 else color("surface") ?: return fail("invalid colors.surface")
-        if (ThemeColorMath.contrastRatio(background, primary) < ThemeDefinition.MIN_TEXT_CONTRAST) {
+
+        val gradient =
+                if (m["gradient"] == null) null
+                else parseGradient(m["gradient"]) ?: return fail("invalid gradient")
+        val style =
+                if (m["style"] == null) ThemeStyle()
+                else parseStyle(m["style"]) ?: return fail("invalid style")
+        val stops = gradient?.stops ?: listOf(background)
+        if (ThemeColorMath.minContrast(primary, stops) < ThemeDefinition.MIN_TEXT_CONTRAST) {
             return fail("primaryText has too little contrast with background")
         }
 
@@ -144,8 +155,62 @@ object ThemeCodec {
                         colors = ThemeColors(background, primary, secondary, accent, surface),
                         typography = typography,
                         motion = ThemeMotion(animations, intensity),
+                        gradient = gradient,
+                        style = style,
                 )
         )
+    }
+
+    private val CLOCK_FACE_REGEX = Regex("^[a-z0-9][a-z0-9_-]{0,47}$")
+
+    private fun parseGradient(v: Any?): ThemeGradient? {
+        @Suppress("UNCHECKED_CAST")
+        val g = v as? Map<String, Any?> ?: return null
+        val raw = g["stops"] as? List<*> ?: return null
+        if (raw.size !in ThemeGradient.MIN_STOPS..ThemeGradient.MAX_STOPS) return null
+        val stops = raw.map { (it as? String)?.let(ThemeColorMath::parseHex) ?: return null }
+        val angle =
+                when (val a = g["angle"]) {
+                    null -> 180
+                    is Long -> if (a in 0L..360L) a.toInt() else return null
+                    else -> return null
+                }
+        return ThemeGradient(stops, angle)
+    }
+
+    /** Lenient on the clock face id (any well-formed id; unknown faces fall back at use), strict on shape. */
+    private fun parseStyle(v: Any?): ThemeStyle? {
+        @Suppress("UNCHECKED_CAST")
+        val s = v as? Map<String, Any?> ?: return null
+        val face =
+                when (val f = s["clockFaceId"]) {
+                    null -> ClockFaces.DEFAULT
+                    is String -> if (CLOCK_FACE_REGEX.matches(f)) f else return null
+                    else -> return null
+                }
+        val preset =
+                when (val p = s["layoutPreset"]) {
+                    null -> "DEFAULT"
+                    is String ->
+                            if (p.length in 1..24 && p.all { it in 'A'..'Z' || it == '_' }) p
+                            else return null
+                    else -> return null
+                }
+        val weight =
+                when (val w = s["fontWeight"]) {
+                    null -> 0
+                    is Long -> if (w == 0L || w in 300L..700L) w.toInt() else return null
+                    else -> return null
+                }
+        val spacing =
+                when (val l = s["letterSpacingEm"]) {
+                    null -> 0f
+                    is Long -> l.toFloat()
+                    is Double -> l.toFloat()
+                    else -> return null
+                }
+        if (spacing.isNaN() || spacing < -0.1f || spacing > ThemeStyle.MAX_LETTER_SPACING_EM) return null
+        return ThemeStyle(face, preset, weight, spacing)
     }
 
     /** True when [theme] would pass import validation (used by the editor before saving). */
@@ -176,6 +241,17 @@ object ThemeCodec {
                 append("  \"motion\": {\n")
                 append("    \"animationsEnabled\": ${theme.motion.animationsEnabled},\n")
                 append("    \"intensity\": ${q(theme.motion.intensity.wire)}\n")
+                append("  },\n")
+                theme.gradient?.let { g ->
+                    append("  \"gradient\": {\"stops\": ")
+                    append(g.stops.joinToString(prefix = "[", postfix = "]") { q(ThemeColorMath.toHex(it)) })
+                    append(", \"angle\": ${g.angleDegrees}},\n")
+                }
+                append("  \"style\": {\n")
+                append("    \"clockFaceId\": ${q(theme.style.clockFaceId)},\n")
+                append("    \"layoutPreset\": ${q(theme.style.layoutPreset)},\n")
+                append("    \"fontWeight\": ${theme.style.fontWeight},\n")
+                append("    \"letterSpacingEm\": ${String.format(java.util.Locale.ROOT, "%.3f", theme.style.letterSpacingEm)}\n")
                 append("  }\n")
                 append("}")
             }

@@ -48,6 +48,49 @@ data class ThemeMotion(
         val intensity: MotionIntensity = MotionIntensity.SUBTLE,
 )
 
+/**
+ * Optional smooth background gradient of 2-3 [stops] (opaque ARGB). [angleDegrees] follows the CSS
+ * convention: 180 = top to bottom, 90 = left to right, 135 = top-left to bottom-right.
+ */
+data class ThemeGradient(val stops: List<Int>, val angleDegrees: Int = 180) {
+    companion object {
+        const val MIN_STOPS = 2
+        const val MAX_STOPS = 3
+        val ANGLE_PRESETS = listOf(180, 135, 90, 45, 0)
+    }
+}
+
+/**
+ * "Style bundle": what a theme suggests beyond colours. [clockFaceId] is resolved leniently (unknown
+ * ids fall back to the default digital clock), [layoutPreset] is a LayoutPreset name, [fontWeight]
+ * (0 = leave unchanged, else 300..700) and [letterSpacingEm] only tune the launcher typography and
+ * never replace the user's chosen font family.
+ */
+data class ThemeStyle(
+        val clockFaceId: String = ClockFaces.DEFAULT,
+        val layoutPreset: String = "DEFAULT",
+        val fontWeight: Int = 0,
+        val letterSpacingEm: Float = 0f,
+) {
+    /** [clockFaceId] if it is a known face, otherwise the default digital clock. */
+    val resolvedClockFaceId: String get() = ClockFaces.resolve(clockFaceId)
+
+    companion object {
+        const val MAX_LETTER_SPACING_EM = 0.2f
+    }
+}
+
+object ClockFaces {
+    const val DEFAULT = "classic-digital"
+    val KNOWN =
+            listOf(
+                    "classic-digital", "stacked", "split-accent", "minimal-text",
+                    "analog-minimal", "analog-ticks", "word-clock", "outline-bold",
+            )
+
+    fun resolve(id: String?): String = if (id != null && id in KNOWN) id else DEFAULT
+}
+
 /** Versioned, data-only theme description. Nothing in here is ever interpreted as code. */
 data class ThemeDefinition(
         val schemaVersion: Int = CURRENT_SCHEMA_VERSION,
@@ -57,9 +100,19 @@ data class ThemeDefinition(
         val colors: ThemeColors,
         val typography: ThemeTypography = ThemeTypography(),
         val motion: ThemeMotion = ThemeMotion(),
+        /** When set, painted instead of the solid [ThemeColors.background] (which stays the fallback). */
+        val gradient: ThemeGradient? = null,
+        val style: ThemeStyle = ThemeStyle(),
 ) {
+    /** Every background colour the text can land on. */
+    val backgroundStops: List<Int> get() = gradient?.stops ?: listOf(colors.background)
+
+    /** One solid colour representing the background (the middle stop) for scrims and system bars. */
+    val representativeBackground: Int
+        get() = gradient?.stops?.let { it[it.size / 2] } ?: colors.background
+
     companion object {
-        const val CURRENT_SCHEMA_VERSION = 1
+        const val CURRENT_SCHEMA_VERSION = 2
         const val MAX_NAME_LENGTH = 40
         const val MAX_ID_LENGTH = 48
         /** Minimum WCAG contrast ratio between background and primary text. */
@@ -85,6 +138,10 @@ object ThemeColorMath {
         val lb = luminance(b)
         return (maxOf(la, lb) + 0.05) / (minOf(la, lb) + 0.05)
     }
+
+    /** Worst-case contrast of [text] against every colour in [backgrounds]. */
+    fun minContrast(text: Int, backgrounds: List<Int>): Double =
+            backgrounds.minOf { contrastRatio(text, it) }
 
     fun toHex(argb: Int): String = "#%06X".format(argb and 0xFFFFFF)
 

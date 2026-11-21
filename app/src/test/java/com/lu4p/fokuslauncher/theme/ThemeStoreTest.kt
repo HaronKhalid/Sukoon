@@ -37,10 +37,10 @@ class ThemeStoreTest {
     private fun custom(id: String, name: String = id) = BuiltInThemes.Ocean.copy(id = id, name = name)
 
     @Test
-    fun `fresh store has no applied theme`() = runBlocking {
+    fun `fresh store applies the Sukoon default theme`() = runBlocking {
         val s = store.state.first()
         assertNull(s.selectedId)
-        assertNull(s.applied)
+        assertEquals(BuiltInThemes.SukoonDefault, s.applied)
         assertEquals(BuiltInThemes.all, s.allThemes)
     }
 
@@ -50,12 +50,13 @@ class ThemeStoreTest {
         assertEquals(BuiltInThemes.Cream, store.appliedTheme.first())
         store.reset()
         assertNull(store.appliedTheme.first())
+        assertTrue(store.state.first().isClassic)
     }
 
     @Test
-    fun `unknown selected id fails safe to no applied theme`() = runBlocking {
+    fun `unknown selected id fails safe to the default theme`() = runBlocking {
         store.select("deleted-long-ago")
-        assertNull(store.appliedTheme.first())
+        assertEquals(BuiltInThemes.SukoonDefault, store.appliedTheme.first())
     }
 
     @Test
@@ -146,7 +147,7 @@ class ThemeStoreTest {
         }
         val s = store.state.first()
         assertTrue(s.customThemes.isEmpty())
-        assertNull(s.applied)
+        assertEquals(BuiltInThemes.SukoonDefault, s.applied)
     }
 
     @Test

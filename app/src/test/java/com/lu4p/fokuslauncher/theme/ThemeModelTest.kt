@@ -9,13 +9,14 @@ import org.junit.Test
 
 class ThemeModelTest {
     @Test
-    fun `there are eight built-in themes with unique ids and the required names`() {
-        val names = BuiltInThemes.all.map { it.name }
+    fun `original eight built-in ids stay stable and ids are unique`() {
+        val ids = BuiltInThemes.all.map { it.id }
         assertEquals(
-                listOf("AMOLED Black", "Midnight Navy", "Cream", "Monochrome", "Nature", "Ocean", "Soft Pastel", "Custom"),
-                names,
+                listOf("amoled-black", "midnight-navy", "cream", "monochrome", "nature", "ocean", "soft-pastel", "custom"),
+                ids.take(8),
         )
-        assertEquals(8, BuiltInThemes.all.map { it.id }.toSet().size)
+        assertTrue(ids.size >= 22)
+        assertEquals(ids.size, ids.toSet().size)
     }
 
     @Test

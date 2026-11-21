@@ -63,6 +63,7 @@ fun SettingsScreen(
         onOpenAppsManagementSettings: () -> Unit = {},
         onOpenGesturesSettings: () -> Unit = {},
         onOpenThemeStudio: () -> Unit = {},
+        onOpenStyleGallery: () -> Unit = {},
         onOpenWallpaper: () -> Unit = {},
         onOpenNotesSettings: () -> Unit = {},
         onOpenTypographySettings: () -> Unit = {},
@@ -104,6 +105,7 @@ fun SettingsScreen(
                 onOpenAppsManagementSettings = onOpenAppsManagementSettings,
                 onOpenGesturesSettings = onOpenGesturesSettings,
                 onOpenThemeStudio = onOpenThemeStudio,
+                onOpenStyleGallery = onOpenStyleGallery,
                 onOpenWallpaper = onOpenWallpaper,
                 onOpenNotesSettings = onOpenNotesSettings,
                 onOpenTypographySettings = onOpenTypographySettings,
@@ -140,6 +142,7 @@ private fun SettingsHubContent(
         onOpenAppsManagementSettings: () -> Unit,
         onOpenGesturesSettings: () -> Unit,
         onOpenThemeStudio: () -> Unit,
+        onOpenStyleGallery: () -> Unit,
         onOpenWallpaper: () -> Unit,
         onOpenNotesSettings: () -> Unit,
         onOpenTypographySettings: () -> Unit,
@@ -230,6 +233,17 @@ private fun SettingsHubContent(
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item { SectionHeader(stringResource(R.string.settings_section_customize)) }
+        item {
+            SettingsRow(
+                    label = stringResource(R.string.style_gallery_title),
+                    subtitle = stringResource(R.string.style_gallery_subtitle),
+                    verticalPadding = 14.dp,
+                    onClick = onOpenStyleGallery,
+                    trailing = { SubpageChevron() },
+                    modifier = Modifier.testTag("settings_style_gallery"),
+            )
+        }
         item { SectionHeader(stringResource(R.string.settings_section_appearance)) }
         item {
             SettingsRow(

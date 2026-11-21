@@ -11,7 +11,12 @@ import com.lu4p.fokuslauncher.theme.ThemeState
 import com.lu4p.fokuslauncher.theme.ThemeStore
 import com.lu4p.fokuslauncher.theme.isReadable
 import com.lu4p.fokuslauncher.theme.saveIdFor
+import com.lu4p.fokuslauncher.theme.duplicated
 import com.lu4p.fokuslauncher.theme.withColor
+import com.lu4p.fokuslauncher.theme.withGradientAngle
+import com.lu4p.fokuslauncher.theme.withGradientEnabled
+import com.lu4p.fokuslauncher.theme.withGradientStop
+import com.lu4p.fokuslauncher.theme.withThirdStop
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,6 +58,26 @@ class ThemeStudioViewModel @Inject constructor(private val store: ThemeStore) : 
 
     fun setColor(field: ThemeColorField, argb: Int) {
         _draft.update { it.withColor(field, argb) }
+    }
+
+    fun setGradientEnabled(on: Boolean) { _draft.update { it.withGradientEnabled(on) } }
+
+    fun setGradientStop(index: Int, argb: Int) { _draft.update { it.withGradientStop(index, argb) } }
+
+    fun setGradientAngle(angle: Int) { _draft.update { it.withGradientAngle(angle) } }
+
+    fun setThirdStop(on: Boolean) { _draft.update { it.withThirdStop(on) } }
+
+    /** Saves a copy of the draft (built-in or custom) as a brand-new custom theme. */
+    fun duplicate(state: ThemeState, copyName: String, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val id = ThemeStore.newCustomId(state.customThemes.map { it.id }.toSet())
+            val copy = _draft.value.duplicated(id, copyName.trim().ifEmpty { _draft.value.name })
+            if (store.saveCustom(copy)) {
+                _draft.value = copy
+                onDone(true)
+            } else onDone(false)
+        }
     }
 
     fun apply(state: ThemeState, onDone: (Boolean) -> Unit) {
