@@ -2,6 +2,7 @@ package com.lu4p.fokuslauncher.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lu4p.fokuslauncher.home.layout.ClockSettings
 import com.lu4p.fokuslauncher.home.layout.HomeLayoutConfig
 import com.lu4p.fokuslauncher.home.layout.HomeLayoutRepository
 import com.lu4p.fokuslauncher.home.layout.LayoutPreset
@@ -13,6 +14,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -42,6 +44,9 @@ constructor(
                     LayoutPreset.entries.firstOrNull { it.name == theme.style.layoutPreset } ?: LayoutPreset.DEFAULT
             layoutRepository.setLayout(HomeLayoutConfig.forPreset(preset))
             store.setClockFaceId(theme.style.resolvedClockFaceId)
+            // The home clock reads its face from ClockSettings, so set it there too.
+            val clock = layoutRepository.clockFlow.first()
+            layoutRepository.setClock(clock.copy(faceId = theme.style.resolvedClockFaceId, accentArgb = 0))
             onDone()
         }
     }
@@ -52,6 +57,7 @@ constructor(
             store.reset()
             layoutRepository.setLayout(HomeLayoutConfig.forPreset(LayoutPreset.DEFAULT))
             store.setClockFaceId(ClockFaces.DEFAULT)
+            layoutRepository.setClock(ClockSettings()) // back to the original Fokus clock
             onDone()
         }
     }

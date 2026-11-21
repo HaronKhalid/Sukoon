@@ -1,4 +1,4 @@
-﻿package com.lu4p.fokuslauncher.ui.settings
+package com.lu4p.fokuslauncher.ui.settings
 
 import android.content.Context
 import android.content.Intent
@@ -158,11 +158,6 @@ private fun SettingsHubContent(
                             onOpenHomeWidgetsSettings,
                     ),
                     SubpageNavRow(
-                            R.string.settings_layout_studio,
-                            stringResource(R.string.settings_layout_studio_subtitle),
-                            onOpenLayoutStudio,
-                    ),
-                    SubpageNavRow(
                             R.string.settings_accessibility,
                             stringResource(R.string.settings_accessibility_subtitle),
                             onOpenDeviceControlSettings,
@@ -244,16 +239,6 @@ private fun SettingsHubContent(
                     modifier = Modifier.testTag("settings_style_gallery"),
             )
         }
-        item { SectionHeader(stringResource(R.string.settings_section_appearance)) }
-        item {
-            SettingsRow(
-                    label = stringResource(R.string.settings_look_and_feel_title),
-                    subtitle = stringResource(R.string.settings_look_and_feel_subtitle),
-                    verticalPadding = 14.dp,
-                    onClick = onOpenAppearanceSettings,
-                    trailing = { SubpageChevron() },
-            )
-        }
         item {
             SettingsRow(
                     label = stringResource(R.string.theme_studio_title),
@@ -265,10 +250,10 @@ private fun SettingsHubContent(
         }
         item {
             SettingsRow(
-                    label = stringResource(R.string.wallpaper_title),
-                    subtitle = stringResource(R.string.wallpaper_subtitle),
+                    label = stringResource(R.string.settings_layout_studio),
+                    subtitle = stringResource(R.string.settings_layout_studio_subtitle),
                     verticalPadding = 14.dp,
-                    onClick = onOpenWallpaper,
+                    onClick = onOpenLayoutStudio,
                     trailing = { SubpageChevron() },
             )
         }
@@ -283,13 +268,34 @@ private fun SettingsHubContent(
         }
         item {
             SettingsRow(
-                    label = stringResource(R.string.battery_settings_title),
-                    subtitle = stringResource(R.string.battery_settings_subtitle),
+                    label = stringResource(R.string.notes_settings_title),
+                    subtitle = stringResource(R.string.notes_settings_subtitle),
                     verticalPadding = 14.dp,
-                    onClick = onOpenBatterySettings,
+                    onClick = onOpenNotesSettings,
                     trailing = { SubpageChevron() },
             )
         }
+        item {
+            SettingsRow(
+                    label = stringResource(R.string.wallpaper_title),
+                    subtitle = stringResource(R.string.wallpaper_subtitle),
+                    verticalPadding = 14.dp,
+                    onClick = onOpenWallpaper,
+                    trailing = { SubpageChevron() },
+            )
+        }
+        item {
+            SettingsRow(
+                    label = stringResource(R.string.settings_look_and_feel_title),
+                    subtitle = stringResource(R.string.settings_look_and_feel_subtitle),
+                    verticalPadding = 14.dp,
+                    onClick = onOpenAppearanceSettings,
+                    trailing = { SubpageChevron() },
+            )
+        }
+        item { SettingsDivider() }
+
+        item { SectionHeader(stringResource(R.string.settings_section_wellbeing)) }
         item {
             SettingsRow(
                     label = stringResource(R.string.focus_title),
@@ -301,10 +307,10 @@ private fun SettingsHubContent(
         }
         item {
             SettingsRow(
-                    label = stringResource(R.string.notes_settings_title),
-                    subtitle = stringResource(R.string.notes_settings_subtitle),
+                    label = stringResource(R.string.battery_settings_title),
+                    subtitle = stringResource(R.string.battery_settings_subtitle),
                     verticalPadding = 14.dp,
-                    onClick = onOpenNotesSettings,
+                    onClick = onOpenBatterySettings,
                     trailing = { SubpageChevron() },
             )
         }
