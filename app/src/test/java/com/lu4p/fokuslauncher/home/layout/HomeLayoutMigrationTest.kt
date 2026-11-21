@@ -45,7 +45,7 @@ class HomeLayoutMigrationTest {
                 .update(MONTH_CALENDAR) { it.copy(visible = true, scalePct = 140, style = 1) }
         val back = HomeLayoutCodec.decode(HomeLayoutCodec.encode(c))
         assertEquals(c, back)
-        assertTrue(HomeLayoutCodec.encode(c).startsWith("v2|"))
+        assertTrue(HomeLayoutCodec.encode(c).startsWith("v3|"))
     }
 
     @Test
@@ -68,7 +68,7 @@ class HomeLayoutMigrationTest {
     fun invalidV2IsRejected() {
         assertNull(HomeLayoutCodec.decode("v2|CUSTOM|CLOCK:1:0:START:100:NORMAL"))
         assertNull(HomeLayoutCodec.decode("v2|CUSTOM|NOPE:1:0:START:100:NORMAL:0"))
-        assertNull(HomeLayoutCodec.decode("v3|CUSTOM|CLOCK:1:0:START:100:NORMAL:0"))
+        assertNull(HomeLayoutCodec.decode("v4|CUSTOM|CLOCK:1:0:START:100:NORMAL:0"))
     }
 
     @Test

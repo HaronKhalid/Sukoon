@@ -2,7 +2,7 @@ package com.lu4p.fokuslauncher.home.layout
 
 /**
  * Compact text codec (no JSON dependency, so it is usable from plain unit tests):
- * `v2|PRESET|TYPE:vis:order:align:percent:spacing:style|...`. Version 1
+ * `v3|PRESET|TYPE:vis:order:align:percent:spacing:style|...`. Version 1
  * (`TYPE:vis:order:align:SIZE_ENUM:spacing`) is still decoded and migrated: the size enum becomes
  * a percent, style 0, and element types added later fall back to their defaults. Decoding returns
  * null for anything invalid, letting callers fall back to the default configuration.
@@ -25,7 +25,7 @@ object HomeLayoutCodec {
         if (raw.isNullOrBlank() || raw.length > 4096) return null
         return try {
             val parts = raw.split('|')
-            val version = when (parts[0]) { "v1" -> 1; "v2" -> 2; else -> return null }
+            val version = when (parts[0]) { "v1" -> 1; "v2" -> 2; "v3" -> 3; else -> return null }
             if (parts.size < 3) return null
             val fieldCount = if (version == 1) 6 else 7
             val preset = LayoutPreset.valueOf(parts[1])

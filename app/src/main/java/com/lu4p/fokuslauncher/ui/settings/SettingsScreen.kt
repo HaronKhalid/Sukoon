@@ -66,6 +66,7 @@ fun SettingsScreen(
         onOpenStyleGallery: () -> Unit = {},
         onOpenWallpaper: () -> Unit = {},
         onOpenNotesSettings: () -> Unit = {},
+        onOpenRemindersSettings: () -> Unit = {},
         onOpenTypographySettings: () -> Unit = {},
         onOpenBatterySettings: () -> Unit = {},
         onOpenFocusSettings: () -> Unit = {},
@@ -108,6 +109,7 @@ fun SettingsScreen(
                 onOpenStyleGallery = onOpenStyleGallery,
                 onOpenWallpaper = onOpenWallpaper,
                 onOpenNotesSettings = onOpenNotesSettings,
+                onOpenRemindersSettings = onOpenRemindersSettings,
                 onOpenTypographySettings = onOpenTypographySettings,
                 onOpenBatterySettings = onOpenBatterySettings,
                 onOpenFocusSettings = onOpenFocusSettings,
@@ -145,6 +147,7 @@ private fun SettingsHubContent(
         onOpenStyleGallery: () -> Unit,
         onOpenWallpaper: () -> Unit,
         onOpenNotesSettings: () -> Unit,
+        onOpenRemindersSettings: () -> Unit,
         onOpenTypographySettings: () -> Unit,
         onOpenBatterySettings: () -> Unit,
         onOpenFocusSettings: () -> Unit,
@@ -263,6 +266,15 @@ private fun SettingsHubContent(
                     subtitle = stringResource(R.string.typography_settings_subtitle),
                     verticalPadding = 14.dp,
                     onClick = onOpenTypographySettings,
+                    trailing = { SubpageChevron() },
+            )
+        }
+        item {
+            SettingsRow(
+                    label = stringResource(R.string.reminders_title),
+                    subtitle = stringResource(R.string.reminders_settings_subtitle),
+                    verticalPadding = 14.dp,
+                    onClick = onOpenRemindersSettings,
                     trailing = { SubpageChevron() },
             )
         }

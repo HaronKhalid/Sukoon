@@ -19,6 +19,8 @@ enum class HomeElementType(
     APP_SEARCH(false), FOCUS_STATUS(false), SPACER(false),
     DATE_CARD(false, 3, true), BATTERY_RING(false, 3, true), MONTH_CALENDAR(false, 2, true),
     FOCUS_RING(false, 2, true), GREETING(false, 3, true), PROGRESS_BAR(false, 3, true),
+    /** Upcoming reminders; styles: beside clock, below clock, compact line, today card. */
+    AGENDA(false, 4, true),
 }
 
 enum class ElementAlignment { START, CENTER, END }
@@ -104,8 +106,8 @@ data class HomeLayoutConfig(
     }
 
     companion object {
-        /** 2 adds continuous size percent, style variants and the widget-gallery element types. */
-        const val CURRENT_VERSION = 2
+        /** 2 adds continuous size percent, style variants and the widget-gallery element types; 3 adds AGENDA. */
+        const val CURRENT_VERSION = 3
 
         fun defaultElements(): List<ElementConfig> = HomeElementType.entries.map { ElementConfig.defaultFor(it) }
 

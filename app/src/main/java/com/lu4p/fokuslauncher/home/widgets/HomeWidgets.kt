@@ -106,6 +106,7 @@ object WidgetCatalog {
         HomeElementType.FOCUS_RING -> R.string.widget_focus_ring
         HomeElementType.GREETING -> R.string.widget_greeting
         HomeElementType.PROGRESS_BAR -> R.string.widget_progress_bar
+        HomeElementType.AGENDA -> R.string.agenda_widget_title
         else -> R.string.widget_generic
     }
 
@@ -116,6 +117,7 @@ object WidgetCatalog {
         HomeElementType.FOCUS_RING -> listOf(R.string.widget_style_ring, R.string.widget_style_bar)
         HomeElementType.GREETING -> listOf(R.string.widget_style_plain, R.string.widget_style_large, R.string.widget_style_with_date)
         HomeElementType.PROGRESS_BAR -> listOf(R.string.widget_style_day, R.string.widget_style_week_progress, R.string.widget_style_both)
+        HomeElementType.AGENDA -> listOf(R.string.agenda_style_beside_clock, R.string.agenda_style_below_clock, R.string.agenda_style_compact, R.string.agenda_style_today_card)
         else -> listOf(R.string.widget_style_plain)
     }
 }
@@ -168,6 +170,7 @@ fun HomeWidget(
         HomeElementType.FOCUS_RING -> FocusRingWidget(pomodoro, s, alignment, onFocusClick, modifier)
         HomeElementType.GREETING -> GreetingWidget(s, alignment, modifier)
         HomeElementType.PROGRESS_BAR -> ProgressWidget(s, alignment, modifier)
+        HomeElementType.AGENDA -> com.lu4p.fokuslauncher.reminders.AgendaWidget(s, alignment, 1f, {}, modifier, onOpen = {})
         else -> Unit
     }
 }
