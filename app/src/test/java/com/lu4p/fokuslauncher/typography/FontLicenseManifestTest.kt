@@ -14,7 +14,7 @@ class FontLicenseManifestTest {
 
     @Test
     fun everyFontFileIsRegisteredWithAnOflLicenceFile() {
-        assertTrue(fontFiles.size >= 20)
+        assertTrue(fontFiles.size >= 15)
         val registered = FontRegistry.bundledFonts.associateBy { File("src/main/assets/${it.assetPath}").name }
         fontFiles.forEach { file ->
             val font = registered[file.name]

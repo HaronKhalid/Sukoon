@@ -29,6 +29,8 @@ data class ClockSettings(
         val faceId: String = "",
         /** Accent colour for faces; 0 means the theme accent. */
         val accentArgb: Int = 0,
+        /** Curated clock style id (see clock.styles); empty or unknown falls back to [faceId]. */
+        val styleId: String = "",
 ) {
     /** True when nothing differs from the legacy clock, so the legacy composable can be used. */
     val isLegacy: Boolean get() = this == ClockSettings()
@@ -49,25 +51,29 @@ data class ClockSettings(
 }
 
 object ClockSettingsCodec {
-    private const val VERSION = "c2"
+    private const val VERSION = "c3"
     private val FACE_ID = Regex("[a-z0-9-]{0,32}")
 
     fun encode(settings: ClockSettings): String = settings.validated().let {
         listOf(VERSION, it.style.name, it.hourFormat.name, if (it.showSeconds) 1 else 0, it.fontSizeSp,
                 it.weight.name, it.letterSpacingSp, it.lineHeightMultiplier, it.colorArgb, it.alignment.name,
                 if (it.showDate) 1 else 0, it.dateStyle.name,
-                it.faceId.takeIf { id -> FACE_ID.matches(id) } ?: "", it.accentArgb).joinToString("|")
+                it.faceId.takeIf { id -> FACE_ID.matches(id) } ?: "", it.accentArgb,
+                it.styleId.takeIf { id -> FACE_ID.matches(id) } ?: "").joinToString("|")
     }
 
-    /** Reads c2 and the older c1 (12 fields, no face or accent). */
+    /** Reads c3, c2 (14 fields, no style id) and c1 (12 fields, no face or accent). */
     fun decode(raw: String?): ClockSettings? {
         if (raw.isNullOrBlank() || raw.length > 512) return null
         return try {
             val f = raw.split('|')
-            val v2 = f.firstOrNull() == "c2"
-            if (!(v2 && f.size == 14) && !(f.firstOrNull() == "c1" && f.size == 12)) return null
+            val v3 = f.firstOrNull() == "c3"
+            val v2 = v3 || f.firstOrNull() == "c2"
+            if (!(v3 && f.size == 15) && !(f.firstOrNull() == "c2" && f.size == 14) &&
+                    !(f.firstOrNull() == "c1" && f.size == 12)) return null
             val faceId = if (v2) f[12] else ""
-            if (!FACE_ID.matches(faceId)) return null
+            val styleId = if (v3) f[14] else ""
+            if (!FACE_ID.matches(faceId) || !FACE_ID.matches(styleId)) return null
             fun bool(v: String) = when (v) { "1" -> true; "0" -> false; else -> throw IllegalArgumentException() }
             val letter = f[6].toFloat()
             val line = f[7].toFloat()
@@ -78,7 +84,7 @@ object ClockSettingsCodec {
                     letterSpacingSp = letter, lineHeightMultiplier = line, colorArgb = f[8].toInt(),
                     alignment = ElementAlignment.valueOf(f[9]), showDate = bool(f[10]),
                     dateStyle = ClockDateStyle.valueOf(f[11]),
-                    faceId = faceId, accentArgb = if (v2) f[13].toInt() else 0,
+                    faceId = faceId, accentArgb = if (v2) f[13].toInt() else 0, styleId = styleId,
             ).validated()
         } catch (_: IllegalArgumentException) {
             null

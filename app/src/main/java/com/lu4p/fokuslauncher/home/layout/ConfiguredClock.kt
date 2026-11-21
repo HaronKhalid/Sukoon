@@ -17,6 +17,8 @@ import androidx.compose.ui.semantics.semantics
 import com.lu4p.fokuslauncher.clock.faces.ClockFaceRegistry
 import com.lu4p.fokuslauncher.clock.faces.ClockFaceSpec
 import com.lu4p.fokuslauncher.clock.faces.WordClock
+import com.lu4p.fokuslauncher.clock.styles.ClockStyleRegistry
+import com.lu4p.fokuslauncher.clock.styles.ClockStyleRenderer
 import com.lu4p.fokuslauncher.typography.TextElement
 import com.lu4p.fokuslauncher.typography.withElementFont
 import com.lu4p.fokuslauncher.ui.util.clickableNoRippleWithSystemSound
@@ -72,7 +74,11 @@ fun ConfiguredClock(
         modifier: Modifier = Modifier,
 ) {
     val now by rememberClockNow(settings.showSeconds)
-    val face = ClockFaceRegistry.get(ClockFaceRegistry.resolveId(settings.faceId, settings.style))
+    // A known curated style wins; unknown/empty style ids fall back to the clock face path.
+    val preset = ClockStyleRegistry.find(settings.styleId)
+    val face = ClockFaceRegistry.get(
+            if (preset != null) ClockStyleRegistry.faceIdFor(preset)
+            else ClockFaceRegistry.resolveId(settings.faceId, settings.style))
     val spec = rememberClockFaceSpec(settings, sizeScale, now)
     val description = remember(now, spec.is24h, face.id) {
         if (face.id == "word-clock") WordClock.text(now.hour, now.minute)
@@ -83,7 +89,7 @@ fun ConfiguredClock(
                     .clickableNoRippleWithSystemSound(onClick = onClick)
                     .semantics { contentDescription = description },
     ) {
-        face.Render(spec, Modifier)
+        if (preset != null) ClockStyleRenderer(preset, spec, Modifier) else face.Render(spec, Modifier)
     }
 }
 
