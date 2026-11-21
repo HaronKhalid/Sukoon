@@ -86,10 +86,11 @@ import com.lu4p.fokuslauncher.ui.components.HomeExtraChipsRow
 import com.lu4p.fokuslauncher.ui.components.ClockWidget
 import com.lu4p.fokuslauncher.home.layout.ConfiguredClock
 import com.lu4p.fokuslauncher.home.layout.ElementAlignment
-import com.lu4p.fokuslauncher.home.layout.ElementSize
 import com.lu4p.fokuslauncher.home.layout.HomeElementType
 import com.lu4p.fokuslauncher.home.layout.HomeLayoutViewModel
 import com.lu4p.fokuslauncher.home.layout.LocalHomeLayout
+import com.lu4p.fokuslauncher.home.widgets.BatteryInfo
+import com.lu4p.fokuslauncher.home.widgets.HomeWidget
 import com.lu4p.fokuslauncher.home.layout.configuredDate
 import com.lu4p.fokuslauncher.ui.components.DateBatteryRow
 import com.lu4p.fokuslauncher.ui.components.FokusBottomSheet
@@ -421,7 +422,7 @@ fun HomeScreenContent(
                 Box(modifier = Modifier.fillMaxWidth().layoutId(HomeContentSlot.Favorites)) {
                     val favouritesLayout = LocalHomeLayout.current.layout
                     if (favouritesLayout.isVisible(HomeElementType.FAVOURITES))
-                    ScaledText(favouritesLayout.element(HomeElementType.FAVOURITES).size.scale) {
+                    ScaledText(favouritesLayout.element(HomeElementType.FAVOURITES).scale) {
                     HomeFavoritesSection(
                         homeAlignment = uiState.homeAlignment,
                         homeAppIconMode = uiState.homeAppIconMode,
@@ -492,7 +493,7 @@ private fun HomeClockWeatherHeader(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             val homeLayout = LocalHomeLayout.current
-            if (homeLayout.clock.isLegacy && homeLayout.layout.element(HomeElementType.CLOCK).size == ElementSize.MEDIUM) {
+            if (homeLayout.clock.isLegacy && homeLayout.layout.element(HomeElementType.CLOCK).scalePct == 100) {
                 ClockWidget(
                     time = clockUiState.currentTime,
                     is24HourFormat = clockUiState.is24HourFormat,
@@ -503,7 +504,7 @@ private fun HomeClockWeatherHeader(
             } else {
                 ConfiguredClock(
                     settings = homeLayout.clock,
-                    sizeScale = homeLayout.layout.element(HomeElementType.CLOCK).size.scale,
+                    sizeScale = homeLayout.layout.element(HomeElementType.CLOCK).scale,
                     onClick = onClockClick,
                     modifier = Modifier.testTag("clock_widget"),
                 )
@@ -692,7 +693,7 @@ private fun HomeWidgetsSection(
                     val el = layoutConfig.element(
                         if (showDateLine) HomeElementType.DATE else HomeElementType.BATTERY,
                     )
-                    ScaledText(el.size.scale) {
+                    ScaledText(el.scale) {
                         DateBatteryRow(
                             date = configuredDate(clockUiState.currentDate, homeLayout.clock.dateStyle),
                             batteryPercent = clockUiState.batteryPercent,
@@ -718,12 +719,12 @@ private fun HomeWidgetsSection(
             }
             HomeElementType.SPACER -> {
                 if (element.visible) {
-                    Spacer(Modifier.height((32 * element.size.scale).dp))
+                    Spacer(Modifier.height((32 * element.scale).dp))
                 }
             }
             HomeElementType.APP_SEARCH -> {
                 if (element.visible) {
-                    ScaledText(element.size.scale) {
+                    ScaledText(element.scale) {
                         HomeSearchEntry(
                             alignment = element.alignment.toWidgetAlignment(),
                             onClick = onOpenDrawer,
@@ -736,7 +737,7 @@ private fun HomeWidgetsSection(
             }
             HomeElementType.FOCUS_STATUS -> {
                 if (element.visible) {
-                    ScaledText(element.size.scale) {
+                    ScaledText(element.scale) {
                         HomeFocusStatus(
                             running = pomodoroUiState.isRunning,
                             remainingText = pomodoroUiState.remainingText,
@@ -765,7 +766,7 @@ private fun HomeWidgetsSection(
                 }
                 if (noteUiState.showWidget && element.visible) {
                     val noteTop = layoutPad(16, element.spacing, rendered)
-                    ScaledText(element.size.scale) {
+                    ScaledText(element.scale) {
                         HomePinnedNoteOr(
                             modifier = Modifier.fillMaxWidth().layoutId(HomeContentSlot.Note)
                                 .padding(top = noteTop),
@@ -780,6 +781,24 @@ private fun HomeWidgetsSection(
                                     .padding(top = noteTop),
                             )
                         }
+                    }
+                    rendered = true
+                    lastWasWeatherOnly = false
+                }
+            }
+            HomeElementType.DATE_CARD, HomeElementType.BATTERY_RING, HomeElementType.MONTH_CALENDAR,
+            HomeElementType.FOCUS_RING, HomeElementType.GREETING, HomeElementType.PROGRESS_BAR -> {
+                if (element.visible) {
+                    ScaledText(element.scale) {
+                        HomeWidget(
+                            type = element.type,
+                            style = element.style,
+                            alignment = element.alignment,
+                            battery = BatteryInfo(clockUiState.batteryPercent, clockUiState.isCharging),
+                            pomodoro = pomodoroUiState,
+                            onFocusClick = onPomodoroPlayPause,
+                            modifier = Modifier.padding(top = layoutPad(12, element.spacing, rendered)),
+                        )
                     }
                     rendered = true
                     lastWasWeatherOnly = false

@@ -27,7 +27,10 @@ class HomeLayoutViewModel @Inject constructor(private val repository: HomeLayout
             combine(repository.layoutFlow, repository.clockFlow, ::HomeLayoutState)
                     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeLayoutState())
 
-    fun applyPreset(preset: LayoutPreset) = edit { repository.setLayout(HomeLayoutConfig.forPreset(preset)) }
+    fun applyPreset(preset: LayoutPreset) = edit {
+        repository.setLayout(HomeLayoutConfig.forPreset(preset))
+        repository.setClock(state.value.clock.copy(faceId = HomeLayoutConfig.presetClockFace(preset), accentArgb = 0))
+    }
 
     fun updateLayout(change: (HomeLayoutConfig) -> HomeLayoutConfig) =
             edit { repository.setLayout(change(state.value.layout)) }

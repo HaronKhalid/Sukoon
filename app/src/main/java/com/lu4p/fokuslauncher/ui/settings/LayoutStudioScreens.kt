@@ -1,6 +1,25 @@
 package com.lu4p.fokuslauncher.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedTextField
+import com.lu4p.fokuslauncher.clock.faces.ClockFaceGallery
+import com.lu4p.fokuslauncher.clock.faces.ClockFaceRegistry
+import com.lu4p.fokuslauncher.home.layout.ElementConfig
+import com.lu4p.fokuslauncher.home.widgets.HomeWidget
+import com.lu4p.fokuslauncher.home.widgets.WidgetCatalog
+import com.lu4p.fokuslauncher.home.widgets.WidgetScale
+import com.lu4p.fokuslauncher.home.widgets.rememberBatteryInfo
+import com.lu4p.fokuslauncher.pomodoro.PomodoroUiState
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -104,10 +123,11 @@ fun LayoutStudioScreen(
                         subtitle = stringResource(R.string.layout_studio_order_note),
                 )
             }
-            items(layout.ordered().map { it.type }) { type ->
+            items(layout.ordered().map { it.type }.filter { !it.optionalWidget || layout.isVisible(it) }) { type ->
                 ElementEditor(layout, type, viewModel)
                 SettingsDivider()
             }
+            item { AddWidgetGallery(layout, viewModel) }
         }
     }
 }
@@ -118,26 +138,149 @@ private fun ElementEditor(layout: HomeLayoutConfig, type: HomeElementType, vm: H
     // Every element is drawn on the home screen now (favourites stay anchored at the bottom).
     val rendered = true
     Column(Modifier.testTag("layout_element_${type.name}")) {
-        SettingsToggleRow(
-                label = type.pretty(),
-                subtitle = if (rendered) null else stringResource(R.string.layout_studio_not_rendered),
-                checked = e.visible,
-                onCheckedChange = { v -> vm.updateLayout { it.update(type) { c -> c.copy(visible = v) } } },
-        )
-        if (e.visible) {
-            ActionRow(
-                    stringResource(R.string.layout_studio_move_up) to { vm.updateLayout { it.move(type, -1) } },
-                    stringResource(R.string.layout_studio_move_down) to { vm.updateLayout { it.move(type, 1) } },
+        if (type.optionalWidget) {
+            SettingsRow(label = stringResource(WidgetCatalog.title(type)))
+            WidgetPreview(type, e)
+            StyleChooser(type, e.style) { v -> vm.updateLayout { it.update(type) { c -> c.copy(style = v) } } }
+        } else {
+            SettingsToggleRow(
+                    label = type.pretty(),
+                    subtitle = if (rendered) null else stringResource(R.string.layout_studio_not_rendered),
+                    checked = e.visible,
+                    onCheckedChange = { v -> vm.updateLayout { it.update(type) { c -> c.copy(visible = v) } } },
             )
+        }
+        if (e.visible) {
+            val up = stringResource(R.string.layout_studio_move_up)
+            val down = stringResource(R.string.layout_studio_move_down)
+            val remove = stringResource(R.string.layout_studio_remove_widget)
+            val actions = buildList<Pair<String, () -> Unit>> {
+                add(up to { vm.updateLayout { it.move(type, -1) } })
+                add(down to { vm.updateLayout { it.move(type, 1) } })
+                if (type.optionalWidget) {
+                    add(remove to { vm.updateLayout { it.update(type) { c -> c.copy(visible = false) } } })
+                }
+            }
+            ActionRow(*actions.toTypedArray())
             EnumDropdown(stringResource(R.string.layout_studio_alignment), ElementAlignment.entries, e.alignment) { v ->
                 vm.updateLayout { it.update(type) { c -> c.copy(alignment = v) } }
             }
-            EnumDropdown(stringResource(R.string.layout_studio_size), ElementSize.entries, e.size) { v ->
-                vm.updateLayout { it.update(type) { c -> c.copy(size = v) } }
-            }
+            SizeSlider(e.scalePct) { v -> vm.updateLayout { it.update(type) { c -> c.copy(scalePct = v) } } }
             EnumDropdown(stringResource(R.string.layout_studio_spacing), ElementSpacing.entries, e.spacing) { v ->
                 vm.updateLayout { it.update(type) { c -> c.copy(spacing = v) } }
             }
+        }
+    }
+}
+
+/** Parses `RRGGBB` or `#RRGGBB` into an opaque ARGB int, or null when invalid. */
+internal fun parseAccentHex(input: String): Int? {
+    val hex = input.trim().removePrefix("#")
+    if (hex.length != 6 || !hex.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) return null
+    return (0xFF000000L or hex.toLong(16)).toInt()
+}
+
+@Composable
+private fun AccentPicker(accentArgb: Int, onChange: (Int) -> Unit) {
+    var text by remember(accentArgb) {
+        mutableStateOf(if (accentArgb == 0) "" else "%06X".format(accentArgb and 0xFFFFFF))
+    }
+    val parsed = parseAccentHex(text)
+    SettingsRow(label = stringResource(R.string.clock_studio_accent))
+    Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
+        FilterChip(
+                selected = accentArgb == 0,
+                onClick = { onChange(0) },
+                label = { Text(stringResource(R.string.clock_studio_accent_theme)) },
+                modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        listOf(0xFFFFC857, 0xFF9BE8C4, 0xFF8FC8FF, 0xFFFF8FA3, 0xFFC3A6FF).forEach { argb ->
+            val v = argb.toInt()
+            Box(Modifier.padding(horizontal = 6.dp).size(32.dp).background(Color(v), CircleShape)
+                    .border(if (accentArgb == v) 3.dp else 1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = if (accentArgb == v) 1f else 0.3f), CircleShape)
+                    .clickable { onChange(v) })
+        }
+    }
+    OutlinedTextField(
+            value = text,
+            onValueChange = { text = it.take(7) },
+            label = { Text(stringResource(R.string.clock_studio_accent_custom_hex)) },
+            singleLine = true,
+            isError = text.isNotEmpty() && parsed == null,
+            supportingText = { if (text.isNotEmpty() && parsed == null) Text(stringResource(R.string.clock_studio_accent_invalid)) },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).testTag("accent_hex"),
+    )
+    FokusTextButton(onClick = { parsed?.let(onChange) }, enabled = parsed != null) {
+        Text(stringResource(R.string.clock_studio_accent_apply))
+    }
+}
+
+@Composable
+private fun SizeSlider(percent: Int, onChange: (Int) -> Unit) {
+    SettingsRow(label = stringResource(R.string.layout_studio_size_percent, percent))
+    Slider(
+            value = percent.toFloat(),
+            onValueChange = { onChange(it.roundToInt().coerceIn(ElementConfig.MIN_PERCENT, ElementConfig.MAX_PERCENT)) },
+            valueRange = ElementConfig.MIN_PERCENT.toFloat()..ElementConfig.MAX_PERCENT.toFloat(),
+            modifier = Modifier.padding(horizontal = 24.dp).testTag("size_slider"),
+    )
+}
+
+@Composable
+private fun WidgetPreview(type: HomeElementType, e: ElementConfig) {
+    val battery = rememberBatteryInfo()
+    Box(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
+        WidgetScale(e.scale) {
+            HomeWidget(type, e.style, e.alignment, battery, PREVIEW_POMODORO, {})
+        }
+    }
+}
+
+private val PREVIEW_POMODORO = PomodoroUiState(enabled = true, remainingText = "17:42", progress = 0.3f)
+
+@Composable
+private fun StyleChooser(type: HomeElementType, selected: Int, onSelect: (Int) -> Unit) {
+    Text(stringResource(R.string.layout_studio_widget_style), style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            modifier = Modifier.padding(horizontal = 24.dp))
+    Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
+        WidgetCatalog.styleLabels(type).forEachIndexed { i, label ->
+            FilterChip(
+                    selected = i == selected,
+                    onClick = { onSelect(i) },
+                    label = { Text(stringResource(label)) },
+                    modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
+    }
+}
+
+/** Gallery of widgets not yet on the home screen, each with a live preview and an Add button. */
+@Composable
+private fun AddWidgetGallery(layout: HomeLayoutConfig, vm: HomeLayoutViewModel) {
+    val battery = rememberBatteryInfo()
+    val missing = WidgetCatalog.addable.filter { !layout.isVisible(it) }
+    Column(Modifier.testTag("widget_gallery")) {
+        SettingsRow(
+                label = stringResource(R.string.layout_studio_add_widget),
+                subtitle = stringResource(
+                        if (missing.isEmpty()) R.string.layout_studio_all_added else R.string.layout_studio_add_widget_hint,
+                ),
+        )
+        missing.forEach { type ->
+            Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp).testTag("widget_card_${type.name}")) {
+                Text(stringResource(WidgetCatalog.title(type)), style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onBackground)
+                Box(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    WidgetScale(0.8f) {
+                        HomeWidget(type, 0, ElementAlignment.START, battery, PREVIEW_POMODORO, {})
+                    }
+                }
+                FokusTextButton(onClick = {
+                    vm.updateLayout { it.update(type) { c -> c.copy(visible = true) } }
+                }) { Text(stringResource(R.string.layout_studio_widget_add)) }
+            }
+            SettingsDivider()
         }
     }
 }
@@ -170,11 +313,20 @@ fun ClockStudioScreen(
                 Column(Modifier.padding(horizontal = 24.dp)) {
                     ConfiguredClock(
                             settings = c,
-                            sizeScale = state.layout.element(HomeElementType.CLOCK).size.scale,
+                            sizeScale = state.layout.element(HomeElementType.CLOCK).scale,
                             onClick = {},
                     )
                 }
-                EnumDropdown(stringResource(R.string.clock_studio_style), ClockStyle.entries, c.style) { v -> change { it.copy(style = v) } }
+                SettingsRow(label = stringResource(R.string.clock_studio_faces))
+                ClockFaceGallery(
+                        settings = c,
+                        selectedId = ClockFaceRegistry.resolveId(c.faceId, c.style),
+                        onSelect = { id -> change { it.copy(faceId = id) } },
+                )
+                SizeSlider(state.layout.element(HomeElementType.CLOCK).scalePct) { v ->
+                    viewModel.updateLayout { it.update(HomeElementType.CLOCK) { e -> e.copy(scalePct = v) } }
+                }
+                AccentPicker(c.accentArgb) { argb -> change { it.copy(accentArgb = argb) } }
                 EnumDropdown(stringResource(R.string.clock_studio_hour_format), ClockHourFormat.entries, c.hourFormat) { v -> change { it.copy(hourFormat = v) } }
                 SettingsToggleRow(
                         label = stringResource(R.string.clock_studio_show_seconds),

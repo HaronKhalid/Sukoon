@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Clock faces -->
+    <string name="clock_face_classic_digital">Classic digital</string>
+    <string name="clock_face_stacked">Stacked</string>
+    <string name="clock_face_split_accent">Split accent</string>
+    <string name="clock_face_minimal_text">Minimal text</string>
+    <string name="clock_face_analog_minimal">Analog minimal</string>
+    <string name="clock_face_analog_ticks">Analog ticks</string>
+    <string name="clock_face_word_clock">Word clock</string>
+    <string name="clock_face_outline_bold">Outline bold</string>
+    <string name="clock_studio_faces">Clock face</string>
+    <string name="clock_studio_face_size">Clock size: %1$d%%</string>
+    <string name="clock_studio_accent">Accent colour</string>
+    <string name="clock_studio_accent_theme">Theme accent</string>
+    <string name="clock_studio_accent_custom_hex">Custom hex (RRGGBB)</string>
+    <string name="clock_studio_accent_apply">Apply</string>
+    <string name="clock_studio_accent_invalid">Enter 6 hex digits, for example 8FC8FF</string>
+
+    <!-- Widget library -->
+    <string name="widget_generic">Widget</string>
+    <string name="widget_date_card">Date card</string>
+    <string name="widget_battery_ring">Battery ring</string>
+    <string name="widget_month_calendar">Month calendar</string>
+    <string name="widget_focus_ring">Focus ring</string>
+    <string name="widget_greeting">Greeting</string>
+    <string name="widget_progress_bar">Day and week progress</string>
+    <string name="widget_style_card">Card</string>
+    <string name="widget_style_inline">Inline</string>
+    <string name="widget_style_outline">Outline</string>
+    <string name="widget_style_ring">Ring</string>
+    <string name="widget_style_ring_label">Ring with label</string>
+    <string name="widget_style_bar">Bar</string>
+    <string name="widget_style_month">Month</string>
+    <string name="widget_style_week">Week</string>
+    <string name="widget_style_plain">Plain</string>
+    <string name="widget_style_large">Large</string>
+    <string name="widget_style_with_date">With date</string>
+    <string name="widget_style_day">Day</string>
+    <string name="widget_style_week_progress">Week</string>
+    <string name="widget_style_both">Both</string>
+    <string name="widget_battery">Battery</string>
+    <string name="widget_battery_charging">Charging</string>
+    <string name="widget_focus_label">Focus %1$s</string>
+    <string name="widget_focus_running">Focusing</string>
+    <string name="widget_focus_idle">Tap to start</string>
+    <string name="widget_greeting_morning">Good morning</string>
+    <string name="widget_greeting_afternoon">Good afternoon</string>
+    <string name="widget_greeting_evening">Good evening</string>
+    <string name="widget_greeting_night">Good night</string>
+    <string name="widget_progress_day">Day</string>
+    <string name="widget_progress_week">Week</string>
+
+    <!-- Layout Studio: widgets -->
+    <string name="layout_studio_add_widget">Add widget</string>
+    <string name="layout_studio_add_widget_hint">Pick a widget. Each has its own size, style, alignment and spacing.</string>
+    <string name="layout_studio_remove_widget">Remove</string>
+    <string name="layout_studio_widget_add">Add</string>
+    <string name="layout_studio_widget_style">Style</string>
+    <string name="layout_studio_size_percent">Size: %1$d%%</string>
+    <string name="layout_studio_all_added">All widgets are on your home screen.</string>
+</resources>

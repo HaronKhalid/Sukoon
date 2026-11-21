@@ -25,6 +25,10 @@ data class ClockSettings(
         val alignment: ElementAlignment = ElementAlignment.START,
         val showDate: Boolean = true,
         val dateStyle: ClockDateStyle = ClockDateStyle.SYSTEM,
+        /** Clock face id (see clock.faces); empty derives the face from the legacy [style]. */
+        val faceId: String = "",
+        /** Accent colour for faces; 0 means the theme accent. */
+        val accentArgb: Int = 0,
 ) {
     /** True when nothing differs from the legacy clock, so the legacy composable can be used. */
     val isLegacy: Boolean get() = this == ClockSettings()
@@ -45,19 +49,25 @@ data class ClockSettings(
 }
 
 object ClockSettingsCodec {
-    private const val VERSION = "c1"
+    private const val VERSION = "c2"
+    private val FACE_ID = Regex("[a-z0-9-]{0,32}")
 
     fun encode(settings: ClockSettings): String = settings.validated().let {
         listOf(VERSION, it.style.name, it.hourFormat.name, if (it.showSeconds) 1 else 0, it.fontSizeSp,
                 it.weight.name, it.letterSpacingSp, it.lineHeightMultiplier, it.colorArgb, it.alignment.name,
-                if (it.showDate) 1 else 0, it.dateStyle.name).joinToString("|")
+                if (it.showDate) 1 else 0, it.dateStyle.name,
+                it.faceId.takeIf { id -> FACE_ID.matches(id) } ?: "", it.accentArgb).joinToString("|")
     }
 
+    /** Reads c2 and the older c1 (12 fields, no face or accent). */
     fun decode(raw: String?): ClockSettings? {
         if (raw.isNullOrBlank() || raw.length > 512) return null
         return try {
             val f = raw.split('|')
-            if (f.size != 12 || f[0] != VERSION) return null
+            val v2 = f.firstOrNull() == "c2"
+            if (!(v2 && f.size == 14) && !(f.firstOrNull() == "c1" && f.size == 12)) return null
+            val faceId = if (v2) f[12] else ""
+            if (!FACE_ID.matches(faceId)) return null
             fun bool(v: String) = when (v) { "1" -> true; "0" -> false; else -> throw IllegalArgumentException() }
             val letter = f[6].toFloat()
             val line = f[7].toFloat()
@@ -68,6 +78,7 @@ object ClockSettingsCodec {
                     letterSpacingSp = letter, lineHeightMultiplier = line, colorArgb = f[8].toInt(),
                     alignment = ElementAlignment.valueOf(f[9]), showDate = bool(f[10]),
                     dateStyle = ClockDateStyle.valueOf(f[11]),
+                    faceId = faceId, accentArgb = if (v2) f[13].toInt() else 0,
             ).validated()
         } catch (_: IllegalArgumentException) {
             null
