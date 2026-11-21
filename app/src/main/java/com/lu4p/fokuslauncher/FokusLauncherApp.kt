@@ -8,6 +8,7 @@ import dagger.hilt.android.HiltAndroidApp
 class FokusLauncherApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        com.lu4p.fokuslauncher.crash.CrashReporter.install(this)
         // After super: Hilt / Application init is ready; still before any activity is created.
         AppLocaleHelper.applyStoredLocaleFromDisk(this)
     }

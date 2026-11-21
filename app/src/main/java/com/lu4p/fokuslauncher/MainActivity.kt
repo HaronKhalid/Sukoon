@@ -152,6 +152,7 @@ class MainActivity : AppCompatActivity() {
                         appTheme = if (wallpaperIsPhoto) null else appTheme,
                 ) {
                     FokusNavGraph()
+                    com.lu4p.fokuslauncher.crash.CrashReportPrompt()
                 }
             }
         }
