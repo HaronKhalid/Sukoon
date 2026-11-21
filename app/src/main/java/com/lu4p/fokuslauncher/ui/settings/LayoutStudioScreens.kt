@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import com.lu4p.fokuslauncher.clock.faces.ClockFaceGallery
+import com.lu4p.fokuslauncher.clock.styles.ClockStylePickerContent
 import com.lu4p.fokuslauncher.clock.faces.ClockFaceRegistry
 import com.lu4p.fokuslauncher.home.layout.ElementConfig
 import com.lu4p.fokuslauncher.home.widgets.HomeWidget
@@ -321,8 +322,10 @@ fun ClockStudioScreen(
                 ClockFaceGallery(
                         settings = c,
                         selectedId = ClockFaceRegistry.resolveId(c.faceId, c.style),
-                        onSelect = { id -> change { it.copy(faceId = id) } },
+                        onSelect = { id -> change { it.copy(faceId = id, styleId = "") } },
                 )
+                SettingsRow(label = stringResource(R.string.clock_styles_title))
+                ClockStylePickerContent()
                 SizeSlider(state.layout.element(HomeElementType.CLOCK).scalePct) { v ->
                     viewModel.updateLayout { it.update(HomeElementType.CLOCK) { e -> e.copy(scalePct = v) } }
                 }

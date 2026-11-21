@@ -37,10 +37,34 @@ checked for the OFL 1.1 header before copying. None declares a Reserved Font Nam
 | Noto Naskh Arabic (wght variable) | `fonts/NotoNaskhArabic-Variable.ttf` | https://github.com/google/fonts/tree/main/ofl/notonaskharabic (upstream https://github.com/notofonts/arabic) | `licenses/NotoNaskhArabic-OFL.txt` | Copyright 2022 The Noto Project Authors |
 | Noto Nastaliq Urdu (wght variable) | `fonts/NotoNastaliqUrdu-Variable.ttf` | https://github.com/google/fonts/tree/main/ofl/notonastaliqurdu (upstream https://github.com/notofonts/nastaliq) | `licenses/NotoNastaliqUrdu-OFL.txt` | Copyright 2022 The Noto Project Authors |
 
+### Bundled display fonts (clock styles, feat/clock-library, 2026-11-21)
+Twelve more files, all **SIL Open Font License 1.1**, **unmodified**, fetched on 2026-11-21 into a fresh scratch directory from the official
+google/fonts repository (`https://raw.githubusercontent.com/google/fonts/main/ofl/<family>/`), each `OFL.txt` read and confirmed to contain the
+OFL 1.1 text, each file confirmed to be a TrueType file, then copied to `assets/fonts` with the licence in `assets/fonts/licenses`.
+Reserved Font Names (Dancing Script, Playfair Display, Righteous) are only used under their own names; no derived font is made.
+Orbitron was not bundled (Righteous covers the display-geometric slot). Jameel Noori Nastaleeq is still not bundled.
+
+| Font | File | Source URL | Licence file | Copyright |
+|---|---|---|---|---|
+| Montserrat (wght variable) | `fonts/Montserrat-Variable.ttf` | https://github.com/google/fonts/tree/main/ofl/montserrat | `licenses/Montserrat-OFL.txt` | Copyright 2024 The Montserrat.Git Project Authors |
+| Poppins Regular (static) | `fonts/Poppins-Regular.ttf` | https://github.com/google/fonts/tree/main/ofl/poppins | `licenses/Poppins-OFL.txt` | Copyright 2020 The Poppins Project Authors |
+| Poppins Bold (static) | `fonts/Poppins-Bold.ttf` | https://github.com/google/fonts/tree/main/ofl/poppins | `licenses/Poppins-OFL.txt` | Copyright 2020 The Poppins Project Authors |
+| Outfit (wght variable) | `fonts/Outfit-Variable.ttf` | https://github.com/google/fonts/tree/main/ofl/outfit | `licenses/Outfit-OFL.txt` | Copyright 2021 The Outfit Project Authors |
+| Nunito (wght variable) | `fonts/Nunito-Variable.ttf` | https://github.com/google/fonts/tree/main/ofl/nunito | `licenses/Nunito-OFL.txt` | Copyright 2014 The Nunito Project Authors |
+| Fredoka (wdth,wght variable) | `fonts/Fredoka-Variable.ttf` | https://github.com/google/fonts/tree/main/ofl/fredoka | `licenses/Fredoka-OFL.txt` | Copyright 2016 The Fredoka Project Authors |
+| Bebas Neue (static) | `fonts/BebasNeue-Regular.ttf` | https://github.com/google/fonts/tree/main/ofl/bebasneue | `licenses/BebasNeue-OFL.txt` | Copyright 2010 by Dharma Type |
+| Caveat (wght variable) | `fonts/Caveat-Variable.ttf` | https://github.com/google/fonts/tree/main/ofl/caveat | `licenses/Caveat-OFL.txt` | Copyright 2014 The Caveat Project Authors |
+| Dancing Script (wght variable) | `fonts/DancingScript-Variable.ttf` | https://github.com/google/fonts/tree/main/ofl/dancingscript | `licenses/DancingScript-OFL.txt` | Copyright 2016 The Dancing Script Project Authors (RFN 'Dancing Script') |
+| Playfair Display (wght variable) | `fonts/PlayfairDisplay-Variable.ttf` | https://github.com/google/fonts/tree/main/ofl/playfairdisplay | `licenses/PlayfairDisplay-OFL.txt` | Copyright 2017 The Playfair Display Project Authors (RFN 'Playfair Display') |
+| Space Grotesk (wght variable) | `fonts/SpaceGrotesk-Variable.ttf` | https://github.com/google/fonts/tree/main/ofl/spacegrotesk | `licenses/SpaceGrotesk-OFL.txt` | Copyright 2020 The Space Grotesk Project Authors |
+| Righteous (static) | `fonts/Righteous-Regular.ttf` | https://github.com/google/fonts/tree/main/ofl/righteous | `licenses/Righteous-OFL.txt` | Copyright (c) 2011 Brian J. Bonislawsky DBA Astigmatic (AOETI), RFN 'Righteous' |
+
+A unit test (`FontLicenseManifestTest`) fails if any bundled font file lacks a registry entry or an OFL licence file.
+
 OFL obligations met: licence + copyright shipped with the fonts; fonts not sold on their own; no modified versions distributed.
 
 **Not bundled:** Jameel Noori Nastaleeq (no confirmed redistribution licence; excluded by brief and covered by a unit test).
-Roboto, Montserrat, Poppins, Outfit were not bundled in this pass (not needed; users can still import their own TTF/OTF via the existing custom-font feature).
+Roboto was not bundled; Montserrat, Poppins and Outfit are now bundled (see display fonts below) (not needed; users can still import their own TTF/OTF via the existing custom-font feature).
 Open question for legal review before public binaries: confirm GPL-3.0 vs GPL-3.0-or-later compatibility when Victoria code is ported.
 
 **Imported fonts:** users can import their own `.ttf`/`.otf` (for example Jameel Noori Nastaleeq) from Fonts settings. The file is copied to app-private storage on the device only; Sukoon does not ship, upload or redistribute it. Imported font files are not part of configuration backups (the font choice key is; after a restore the font falls back to the system font until re-imported).
