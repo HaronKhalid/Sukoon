@@ -28,7 +28,7 @@ class HomeLayoutTest {
     fun defaultConfigKeepsExistingElementsVisibleAndNewOnesOff() {
         val d = HomeLayoutConfig.Default
         listOf(CLOCK, DATE, BATTERY, NOTES, FAVOURITES).forEach { assertTrue(d.isVisible(it)) }
-        listOf(APP_SEARCH, FOCUS_STATUS, SPACER).forEach { assertFalse(d.isVisible(it)) }
+        listOf(APP_SEARCH, FOCUS_STATUS, SPACER, DATE_CARD, BATTERY_RING, MONTH_CALENDAR, FOCUS_RING, GREETING, PROGRESS_BAR).forEach { assertFalse(d.isVisible(it)) }
         assertTrue(ClockSettings().isLegacy)
         assertEquals(HomeElementType.entries.size, d.elements.size)
     }
@@ -38,14 +38,14 @@ class HomeLayoutTest {
         fun visible(p: LayoutPreset) =
                 HomeLayoutConfig.forPreset(p).elements.filter { it.visible }.map { it.type }.toSet()
         assertEquals(setOf(CLOCK, FAVOURITES), visible(LayoutPreset.PURE_MINIMAL))
-        assertEquals(setOf(SPACER, CLOCK, DATE, FAVOURITES), visible(LayoutPreset.AESTHETIC))
-        assertEquals(setOf(CLOCK, FOCUS_STATUS, FAVOURITES), visible(LayoutPreset.FOCUS))
-        assertTrue(BATTERY in visible(LayoutPreset.INFORMATION) && NOTES in visible(LayoutPreset.INFORMATION))
+        assertEquals(setOf(SPACER, CLOCK, DATE_CARD, FAVOURITES), visible(LayoutPreset.AESTHETIC))
+        assertEquals(setOf(CLOCK, FOCUS_RING, FAVOURITES), visible(LayoutPreset.FOCUS))
+        assertTrue(BATTERY_RING in visible(LayoutPreset.INFORMATION) && MONTH_CALENDAR in visible(LayoutPreset.INFORMATION))
         val aesthetic = HomeLayoutConfig.forPreset(LayoutPreset.AESTHETIC)
         assertEquals(ElementAlignment.CENTER, aesthetic.element(CLOCK).alignment)
-        val edited = aesthetic.update(DATE) { it.copy(visible = false) }
+        val edited = aesthetic.update(DATE_CARD) { it.copy(visible = false) }
         assertEquals(LayoutPreset.CUSTOM, edited.preset)
-        assertFalse(edited.isVisible(DATE))
+        assertFalse(edited.isVisible(DATE_CARD))
     }
 
     @Test
