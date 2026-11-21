@@ -136,6 +136,7 @@ object Routes {
     const val SETTINGS_NOTE_APPEARANCE = "settings_note_appearance"
     const val SETTINGS_BATTERY = "settings_battery"
     const val SETTINGS_FOCUS = "settings_focus"
+    const val SETTINGS_REMINDERS = "settings_reminders"
 
     fun iconPickerShortcut(index: Int): String = "settings_icon_picker/shortcut/$index"
 
@@ -323,7 +324,7 @@ fun FokusNavGraph(
                         .background(Color.Transparent)
         ) {
             // ── Main navigation (Home + Settings) ──────────────────────
-            CompositionLocalProvider(LocalOpenNotes provides { navController.navigateSingleTop(Routes.SETTINGS_NOTES) }, com.lu4p.fokuslauncher.notes.LocalOpenNoteAppearance provides { navController.navigateSingleTop(Routes.SETTINGS_NOTE_APPEARANCE) }) {
+            CompositionLocalProvider(LocalOpenNotes provides { navController.navigateSingleTop(Routes.SETTINGS_NOTES) }, com.lu4p.fokuslauncher.notes.LocalOpenNoteAppearance provides { navController.navigateSingleTop(Routes.SETTINGS_NOTE_APPEARANCE) }, com.lu4p.fokuslauncher.reminders.LocalOpenReminders provides { navController.navigateSingleTop(Routes.SETTINGS_REMINDERS) }) {
             ProvideElementFonts {
             NavHost(
             navController = navController,
@@ -841,6 +842,9 @@ fun FokusNavGraph(
                     onOpenNotesSettings = {
                         navController.navigateSingleTop(Routes.SETTINGS_NOTES)
                     },
+                    onOpenRemindersSettings = {
+                        navController.navigateSingleTop(Routes.SETTINGS_REMINDERS)
+                    },
                     onOpenTypographySettings = {
                         navController.navigateSingleTop(Routes.SETTINGS_TYPOGRAPHY)
                     },
@@ -889,6 +893,13 @@ fun FokusNavGraph(
                             showDrawer = false
                             navController.popBackStack(Routes.HOME, inclusive = false)
                         },
+                        backgroundScrim = com.lu4p.fokuslauncher.theme.themedSettingsScrim,
+                )
+            }
+
+            fokusSettingsComposable(Routes.SETTINGS_REMINDERS) {
+                com.lu4p.fokuslauncher.reminders.RemindersScreen(
+                        onNavigateBack = { navController.popBackStack() },
                         backgroundScrim = com.lu4p.fokuslauncher.theme.themedSettingsScrim,
                 )
             }

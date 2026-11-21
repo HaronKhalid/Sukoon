@@ -603,7 +603,9 @@ private fun HomeWidgetsSection(
 ) {
     val homeLayout = LocalHomeLayout.current
     val layoutConfig = homeLayout.layout
-    val showClock = uiState.showHomeClock && layoutConfig.isVisible(HomeElementType.CLOCK)
+    // The agenda's "beside clock" style draws the clock itself, so the plain clock steps aside.
+    val agendaBesideClock = layoutConfig.element(HomeElementType.AGENDA).let { it.visible && it.style == 0 }
+    val showClock = uiState.showHomeClock && layoutConfig.isVisible(HomeElementType.CLOCK) && !agendaBesideClock
     val showWeather = uiState.showHomeWeather && weatherUiState.showWeatherWidget
     val showDateLine = uiState.showHomeDate && layoutConfig.isVisible(HomeElementType.DATE) &&
         homeLayout.clock.showDate
@@ -801,6 +803,19 @@ private fun HomeWidgetsSection(
                             modifier = Modifier.padding(top = layoutPad(12, element.spacing, rendered)),
                         )
                     }
+                    rendered = true
+                    lastWasWeatherOnly = false
+                }
+            }
+            HomeElementType.AGENDA -> {
+                if (element.visible) {
+                    com.lu4p.fokuslauncher.reminders.AgendaWidget(
+                        style = element.style,
+                        alignment = element.alignment,
+                        scale = element.scale,
+                        onClockClick = onClockClick,
+                        modifier = Modifier.padding(top = layoutPad(12, element.spacing, rendered)),
+                    )
                     rendered = true
                     lastWasWeatherOnly = false
                 }

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminders_title">Reminders</string>
+    <string name="reminders_settings_subtitle">Notes to self with a time, kept on this device</string>
+    <string name="reminders_new_hint">New reminder</string>
+    <string name="reminders_empty">Nothing to remember yet. Type a reminder above and pick a time.</string>
+    <string name="reminders_chip_hour">In 1 hour</string>
+    <string name="reminders_chip_evening">This evening</string>
+    <string name="reminders_chip_tomorrow">Tomorrow 9:00</string>
+    <string name="reminders_chip_pick">Pick date &amp; time</string>
+
+    <string name="reminders_group_overdue">Overdue</string>
+    <string name="reminders_group_today">Today</string>
+    <string name="reminders_group_tomorrow">Tomorrow</string>
+    <string name="reminders_group_done">Done</string>
+    <string name="reminders_all_day">All day</string>
+    <string name="reminders_calendar_tag">Calendar</string>
+
+    <string name="reminders_edit_title">Edit reminder</string>
+    <string name="reminders_field_title">Title</string>
+    <string name="reminders_field_note">Note (optional)</string>
+    <string name="reminders_pick_date">Date</string>
+    <string name="reminders_pick_time">Time</string>
+    <string name="reminders_repeat">Repeat</string>
+    <string name="reminders_repeat_none">Never</string>
+    <string name="reminders_repeat_daily">Daily</string>
+    <string name="reminders_repeat_weekdays">Weekdays</string>
+    <string name="reminders_repeat_weekly">Weekly</string>
+    <string name="reminders_repeat_monthly">Monthly</string>
+    <string name="reminders_notify">Notify me</string>
+    <string name="reminders_notify_denied">Notifications are off for Sukoon, so this reminder will only show in the list.</string>
+    <string name="reminders_save">Save</string>
+    <string name="reminders_delete">Delete</string>
+    <string name="reminders_cancel">Cancel</string>
+    <string name="reminders_ok">OK</string>
+    <string name="reminders_complete">Mark done</string>
+    <string name="reminders_reopen">Mark not done</string>
+
+    <string name="reminders_privacy_header">Privacy</string>
+    <string name="reminders_lock_full_text">Show full text on lock screen</string>
+    <string name="reminders_lock_full_text_subtitle">Off: the lock screen only says \"Reminder\" until you unlock.</string>
+
+    <string name="reminders_calendar_header">Calendar</string>
+    <string name="reminders_calendar_toggle">Also show calendar events</string>
+    <string name="reminders_calendar_toggle_subtitle">Off by default. Shows the next 3 days from your calendar app.</string>
+    <string name="reminders_calendar_why_title">Allow calendar access?</string>
+    <string name="reminders_calendar_why_body">Sukoon needs to read your calendar to list upcoming events next to your reminders. Events are read when the screen or widget is shown, are never copied, stored or sent anywhere, and you can switch this off at any time.</string>
+    <string name="reminders_calendar_continue">Continue</string>
+    <string name="reminders_calendar_denied">Calendar access was denied, so events are not shown. Reminders work as usual.</string>
+    <string name="reminders_open_app_settings">App settings</string>
+    <string name="reminders_calendar_grant_again">Allow again</string>
+
+    <string name="reminders_channel_name">Reminders</string>
+    <string name="reminders_channel_description">Notifications when a reminder is due</string>
+    <string name="reminders_notification_private_title">Reminder</string>
+    <string name="reminders_action_done">Done</string>
+    <string name="reminders_action_snooze">Snooze 10 min</string>
+
+    <string name="agenda_widget_title">Agenda</string>
+    <string name="agenda_style_beside_clock">Beside clock</string>
+    <string name="agenda_style_below_clock">List</string>
+    <string name="agenda_style_compact">Compact line</string>
+    <string name="agenda_style_today_card">Today card</string>
+    <string name="agenda_empty">No reminders - tap to add</string>
+    <string name="agenda_today_header">Today</string>
+    <string name="agenda_nothing_today">Nothing planned today</string>
+    <string name="agenda_more">+%1$d more</string>
+</resources>

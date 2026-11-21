@@ -55,3 +55,10 @@ No analytics, accounts or ads. Data stays on device.
 - No new permission. Battery values come from the `ACTION_BATTERY_CHANGED` sticky broadcast (no permission needed), registered only while the Battery settings screen is visible.
 - Level history (timestamp, level, charging; max 500) is stored only on the device in the `battery_preferences` DataStore and can be wiped with "Clear data". Not exported.
 - Per-app screen time uses the existing optional `PACKAGE_USAGE_STATS` access, explained before the user is sent to Android Settings; it is labelled screen time, never battery use.
+
+## Reminders and agenda
+- Reminders are stored only on the device (separate `reminders` DataStore, versioned JSON, max 200). They are not in configuration backups and never leave the phone.
+- `POST_NOTIFICATIONS` (already declared) is requested only when the user turns on "Notify me" for a reminder. Notifications default to lock-screen visibility PRIVATE: the lock screen shows only "Reminder"; a setting shows the full text.
+- `RECEIVE_BOOT_COMPLETED` (new): a minimal receiver that only re-arms the single next reminder alarm after a reboot.
+- Alarms use `AlarmManager.setAndAllowWhileIdle` (inexact). `SCHEDULE_EXACT_ALARM` / `USE_EXACT_ALARM` are not requested; there is no foreground service and no background polling. Only the next due reminder is scheduled.
+- `READ_CALENDAR` (new, optional, off by default): used only if the user switches on "Also show calendar events" and, after an explanation dialog, grants it. Events for the next 3 days are read through `CalendarContract.Instances` when the Reminders screen or the home agenda widget is shown, kept in memory only, never stored or sent. If denied or revoked, the feature stays off and reminders are unaffected. The `lite` manifest overlay is unchanged.
