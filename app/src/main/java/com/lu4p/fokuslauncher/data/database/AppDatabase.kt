@@ -20,7 +20,7 @@ import com.lu4p.fokuslauncher.notes.NoteEntity
         SuppressedCategoryDefinitionEntity::class,
         NoteEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

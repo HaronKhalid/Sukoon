@@ -1,5 +1,6 @@
 package com.lu4p.fokuslauncher.notes
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.Insert
@@ -32,17 +33,23 @@ data class NoteEntity(
         val backgroundColor: Int = NoteAppearance.DEFAULT.backgroundColor,
         val paddingDp: Int = NoteAppearance.DEFAULT.paddingDp,
         val maxLines: Int = NoteAppearance.DEFAULT.maxLines,
+        /** Position among pinned notes (legacy pinned rows hold 0 and sort by id). */
+        @ColumnInfo(defaultValue = "0") val pinOrder: Int = 0,
+        /** Id of the [NoteStyles] design last applied; empty when styled by hand. */
+        @ColumnInfo(defaultValue = "''") val styleId: String = "",
+        /** Per-note card options as [NoteWidgetStyle.encode]; empty follows the global default. */
+        @ColumnInfo(defaultValue = "''") val cardStyle: String = "",
 )
 
 @Dao
 abstract class NoteDao {
-    @Query("SELECT * FROM notes ORDER BY pinned DESC, updatedAt DESC, id DESC")
+    @Query("SELECT * FROM notes ORDER BY pinned DESC, pinOrder ASC, updatedAt DESC, id DESC")
     abstract fun observeAll(): Flow<List<NoteEntity>>
 
     @Query("SELECT * FROM notes")
     abstract suspend fun getAll(): List<NoteEntity>
 
-    @Query("SELECT * FROM notes WHERE pinned = 1 LIMIT 1")
+    @Query("SELECT * FROM notes WHERE pinned = 1 ORDER BY pinOrder ASC, id ASC LIMIT 1")
     abstract fun observePinned(): Flow<NoteEntity?>
 
     @Query("SELECT * FROM notes WHERE id = :id")

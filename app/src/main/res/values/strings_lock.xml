@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Note styles -->
+    <string name="lock_style_sticky">Sticky note</string>
+    <string name="lock_style_minimal">Minimal text</string>
+    <string name="lock_style_glass">Glass card</string>
+    <string name="lock_style_quote">Quote card</string>
+    <string name="lock_style_handwritten">Handwritten</string>
+    <string name="lock_style_checklist">Checklist card</string>
+    <string name="lock_style_ruled">Ruled paper</string>
+    <string name="lock_style_neon">Neon</string>
+    <string name="lock_style_outlined">Outlined</string>
+    <string name="lock_style_journal">Journal line</string>
+    <string name="lock_style_poster">Poster</string>
+    <string name="lock_style_soft">Soft card</string>
+    <string name="lock_style_sample">Aa 123\nاردو نوٹ</string>
+    <string name="lock_empty_note">Your note appears here</string>
+
+    <!-- Home notes: style gallery and pinned notes (notes appearance screen) -->
+    <string name="lock_gallery_title">Note styles</string>
+    <string name="lock_gallery_hint">Tap a style to apply it to the selected home note. Every setting below stays editable.</string>
+    <string name="lock_set_default">Use as default for new notes</string>
+    <string name="lock_default_set">Default style set</string>
+    <string name="lock_add_note">Add note to home</string>
+    <string name="lock_new_note_title">New note</string>
+    <string name="lock_pinned_notes">Home notes (up to 3)</string>
+    <string name="lock_max_pins">The home screen shows up to 3 notes. Remove one first.</string>
+    <string name="lock_move_up">Move up</string>
+    <string name="lock_move_down">Move down</string>
+    <string name="lock_remove_from_home">Remove from home</string>
+    <string name="lock_open_designer">Lock screen note</string>
+    <string name="lock_home_menu">Lock screen note</string>
+    <string name="lock_editing_note">Editing: %1$s</string>
+    <string name="lock_no_pinned">No note is pinned to the home screen yet. Add one to style it.</string>
+
+    <!-- Lock screen designer -->
+    <string name="lock_title">Lock screen note</string>
+    <string name="lock_honesty">A launcher cannot draw on Android\'s lock screen. This makes a picture of your note and sets it as the lock-screen wallpaper. It is a snapshot: it changes only when you tap Update, and some phone makers ignore lock-screen wallpapers set by apps. Android\'s own clock and notifications always draw on top.</string>
+    <string name="lock_preview_label">Preview - your real lock screen clock and notifications stay Android\'s</string>
+    <string name="lock_pick_note">Note</string>
+    <string name="lock_note_auto">Pinned note (first)</string>
+    <string name="lock_no_notes">Create a note first, then come back here.</string>
+    <string name="lock_style_label">Style</string>
+    <string name="lock_style_own">Note\'s own look</string>
+    <string name="lock_font_label">Font</string>
+    <string name="lock_font_from_style">From style</string>
+    <string name="lock_alignment">Text alignment</string>
+    <string name="lock_position">Position</string>
+    <string name="lock_pos_top">Top</string>
+    <string name="lock_pos_center">Centre</string>
+    <string name="lock_pos_bottom">Bottom</string>
+    <string name="lock_background">Background</string>
+    <string name="lock_bg_solid">Solid</string>
+    <string name="lock_bg_gradient">Gradient</string>
+    <string name="lock_bg_backdrop">Backdrop</string>
+    <string name="lock_bg_photo">Photo</string>
+    <string name="lock_color_top">Top colour</string>
+    <string name="lock_color_bottom">Bottom colour</string>
+    <string name="lock_pick_photo">Choose photo</string>
+    <string name="lock_photo_none">No photo chosen yet. The photo is copied into this app only.</string>
+    <string name="lock_clock_line">Add a clock-style text line</string>
+    <string name="lock_clock_line_hint">Static text in the picture. Android\'s real clock stays and may overlap it.</string>
+    <string name="lock_text_size">Text size %1$d%%</string>
+    <string name="lock_set">Set as lock screen wallpaper</string>
+    <string name="lock_update">Update lock screen</string>
+    <string name="lock_auto_update">Update automatically when I edit the note</string>
+    <string name="lock_auto_update_hint">Only while this app can run. Otherwise tap Update.</string>
+    <string name="lock_choose_other">Choose another wallpaper</string>
+    <string name="lock_choose_other_hint">Android does not let apps read or restore your previous lock wallpaper. To go back, pick another wallpaper.</string>
+    <string name="lock_result_applied">Lock screen wallpaper updated</string>
+    <string name="lock_result_no_note">There is no note to show</string>
+    <string name="lock_result_not_allowed">This phone does not allow apps to set the lock wallpaper</string>
+    <string name="lock_result_failed">Could not set the lock wallpaper. Some phone makers ignore it.</string>
+
+    <!-- Optional pinned notification -->
+    <string name="lock_notif_section">Pinned notification (optional)</string>
+    <string name="lock_notif_switch">Show note as a notification</string>
+    <string name="lock_notif_desc">A quiet, ongoing notification with your note text. It stays on this device. Android may let you swipe it away, and it is not restored after a restart.</string>
+    <string name="lock_notif_lock_switch">Also show the text on the lock screen</string>
+    <string name="lock_notif_ack_title">Show note on the lock screen?</string>
+    <string name="lock_notif_ack_body">Anyone who picks up your phone will be able to read this note without unlocking it. Only continue if the note is not private.</string>
+    <string name="lock_notif_ack_confirm">I understand, show it</string>
+    <string name="lock_notif_cancel">Cancel</string>
+    <string name="lock_notif_denied">Notifications are off for this app, so the note notification cannot be shown.</string>
+    <string name="lock_notif_channel_private">Pinned note (hidden on lock screen)</string>
+    <string name="lock_notif_channel_public">Pinned note (visible on lock screen)</string>
+    <string name="lock_notif_channel_desc">Optional ongoing note, quiet and silent.</string>
+    <string name="lock_notif_title">Note</string>
+    <string name="lock_notif_hidden">Note hidden</string>
+</resources>
