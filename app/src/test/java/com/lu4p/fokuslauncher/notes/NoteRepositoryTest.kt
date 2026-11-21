@@ -13,7 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** In-memory DAO so repository rules run on the plain JVM (no SQLite native library needed). */
-private class FakeNoteDao : NoteDao() {
+internal class FakeNoteDao : NoteDao() {
     private val rows = MutableStateFlow<Map<Long, NoteEntity>>(emptyMap())
     private var nextId = 1L
 

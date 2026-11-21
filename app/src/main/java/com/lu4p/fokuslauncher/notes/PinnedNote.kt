@@ -1,6 +1,8 @@
 package com.lu4p.fokuslauncher.notes
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +38,9 @@ val LocalOpenNotes = androidx.compose.runtime.staticCompositionLocalOf<() -> Uni
 /** Opens the home-note appearance screen. */
 val LocalOpenNoteAppearance = androidx.compose.runtime.staticCompositionLocalOf<() -> Unit> { {} }
 
+/** Opens the lock-screen note designer. */
+val LocalOpenLockNote = androidx.compose.runtime.staticCompositionLocalOf<() -> Unit> { {} }
+
 @HiltViewModel
 class PinnedNoteViewModel
 @Inject
@@ -44,6 +49,9 @@ constructor(
         private val widgetPreferences: NoteWidgetPreferences,
         val fontCache: FontFamilyCache,
 ) : ViewModel() {
+    val pinnedList: StateFlow<List<NoteEntity>> =
+            repository.pinnedNotes.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val pinned: StateFlow<NoteEntity?> =
             repository.pinnedNote.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -61,8 +69,12 @@ constructor(
         viewModelScope.launch { repository.pin(id) }
     }
 
+    fun replacePinned(old: Long, new: Long) {
+        viewModelScope.launch { repository.replacePin(old, new) }
+    }
+
     fun unpin(id: Long) {
-        viewModelScope.launch { repository.unpin(id) }
+        viewModelScope.launch { repository.unpinOne(id) }
     }
 
     fun delete(id: Long) {
@@ -86,10 +98,10 @@ constructor(
 }
 
 /**
- * Home-screen slot for the pinned in-app note. When no note is pinned this renders [fallback]
- * (the existing markdown home note), so the SAF note feature keeps working unchanged. Tap or
- * long-press opens a small menu: edit, switch the pinned note, appearance, remove from home.
- * When the slot is empty ([fallbackIsEmpty]) a tasteful sample note is created once.
+ * Home-screen slot for pinned in-app notes (up to [PinModel.MAX_PINNED], each with its own style,
+ * order and size). When no note is pinned this renders [fallback] (the existing markdown home
+ * note), so the SAF note feature keeps working unchanged. Tap or long-press on a note opens a
+ * small menu. When the slot is empty ([fallbackIsEmpty]) a sample note is created once.
  */
 @Composable
 fun HomePinnedNoteOr(
@@ -98,12 +110,9 @@ fun HomePinnedNoteOr(
         viewModel: PinnedNoteViewModel = hiltViewModel(),
         fallback: @Composable () -> Unit,
 ) {
-    val onOpen = LocalOpenNotes.current
-    val onAppearance = LocalOpenNoteAppearance.current
-    val note by viewModel.pinned.collectAsStateWithLifecycle()
-    val style by viewModel.style.collectAsStateWithLifecycle()
-    val pinned = note
-    if (pinned == null) {
+    val notes by viewModel.pinnedList.collectAsStateWithLifecycle()
+    val global by viewModel.style.collectAsStateWithLifecycle()
+    if (notes.isEmpty()) {
         val sampleTitle = stringResource(R.string.notes_sample_title)
         val sampleBody = stringResource(R.string.notes_sample_body)
         LaunchedEffect(fallbackIsEmpty) {
@@ -112,7 +121,25 @@ fun HomePinnedNoteOr(
         fallback()
         return
     }
-    val appearance = remember(pinned) { pinned.appearance() }
+    Column(modifier, verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+        notes.forEachIndexed { index, pinned ->
+            PinnedNoteCard(pinned, global, viewModel, tag = if (index == 0) "pinned_note" else "pinned_note_$index")
+        }
+    }
+}
+
+@Composable
+private fun PinnedNoteCard(
+        pinned: NoteEntity,
+        global: NoteWidgetStyle,
+        viewModel: PinnedNoteViewModel,
+        tag: String,
+) {
+    val onOpen = LocalOpenNotes.current
+    val onAppearance = LocalOpenNoteAppearance.current
+    val onLock = LocalOpenLockNote.current
+    val style = remember(pinned, global) { NoteStyles.effective(pinned, global) }
+    val appearance = style.appearance
     val launcherFamily =
             LocalElementFonts.current[TextElement.NOTES]
                     ?: MaterialTheme.typography.bodyLarge.fontFamily
@@ -121,13 +148,20 @@ fun HomePinnedNoteOr(
             remember(appearance.fontFamily, launcherFamily) {
                 viewModel.fontCache.familyFor(appearance.fontFamily, launcherFamily)
             }
+    val decoration = remember(pinned.styleId) { NoteStyles.find(pinned.styleId)?.decoration ?: NoteDecoration.NONE }
     val text =
             remember(pinned.title, pinned.body) {
                 listOf(pinned.title, pinned.body).filter { it.isNotBlank() }.joinToString("\n")
             }
+    val stamp =
+            remember(pinned.updatedAt) {
+                if (pinned.updatedAt <= 0) null
+                else java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                        .format(java.util.Date(pinned.updatedAt))
+            }
     var menuOpen by remember { mutableStateOf(false) }
     var switching by remember { mutableStateOf(false) }
-    Box(modifier) {
+    Box {
         NoteCardView(
                 text = text,
                 appearance = appearance,
@@ -135,7 +169,9 @@ fun HomePinnedNoteOr(
                 family = family,
                 onClick = { menuOpen = true },
                 onLongClick = { menuOpen = true },
-                modifier = Modifier.testTag("pinned_note"),
+                modifier = Modifier.testTag(tag),
+                decoration = decoration,
+                stamp = stamp,
         )
         DropdownMenu(
                 expanded = menuOpen,
@@ -164,6 +200,13 @@ fun HomePinnedNoteOr(
                         },
                 )
                 DropdownMenuItem(
+                        text = { Text(stringResource(R.string.lock_home_menu)) },
+                        onClick = {
+                            menuOpen = false
+                            onLock()
+                        },
+                )
+                DropdownMenuItem(
                         text = { Text(stringResource(R.string.notes_home_unpin)) },
                         onClick = {
                             menuOpen = false
@@ -179,7 +222,7 @@ fun HomePinnedNoteOr(
                 )
             } else {
                 val others by viewModel.allNotes.collectAsStateWithLifecycle()
-                others.forEach { n ->
+                others.filter { !it.pinned }.forEach { n ->
                     DropdownMenuItem(
                             text = {
                                 Text(
@@ -191,7 +234,7 @@ fun HomePinnedNoteOr(
                             onClick = {
                                 menuOpen = false
                                 switching = false
-                                viewModel.pin(n.id)
+                                viewModel.replacePinned(pinned.id, n.id)
                             },
                     )
                 }

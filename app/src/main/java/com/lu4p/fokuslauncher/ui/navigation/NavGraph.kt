@@ -134,6 +134,7 @@ object Routes {
     const val SETTINGS_NOTES = "settings_notes"
     const val SETTINGS_TYPOGRAPHY = "settings_typography"
     const val SETTINGS_NOTE_APPEARANCE = "settings_note_appearance"
+    const val SETTINGS_LOCK_NOTE = "settings_lock_note"
     const val SETTINGS_BATTERY = "settings_battery"
     const val SETTINGS_FOCUS = "settings_focus"
 
@@ -323,7 +324,7 @@ fun FokusNavGraph(
                         .background(Color.Transparent)
         ) {
             // ── Main navigation (Home + Settings) ──────────────────────
-            CompositionLocalProvider(LocalOpenNotes provides { navController.navigateSingleTop(Routes.SETTINGS_NOTES) }, com.lu4p.fokuslauncher.notes.LocalOpenNoteAppearance provides { navController.navigateSingleTop(Routes.SETTINGS_NOTE_APPEARANCE) }) {
+            CompositionLocalProvider(LocalOpenNotes provides { navController.navigateSingleTop(Routes.SETTINGS_NOTES) }, com.lu4p.fokuslauncher.notes.LocalOpenNoteAppearance provides { navController.navigateSingleTop(Routes.SETTINGS_NOTE_APPEARANCE) }, com.lu4p.fokuslauncher.notes.LocalOpenLockNote provides { navController.navigateSingleTop(Routes.SETTINGS_LOCK_NOTE) }) {
             ProvideElementFonts {
             NavHost(
             navController = navController,
@@ -903,6 +904,14 @@ fun FokusNavGraph(
             fokusSettingsComposable(Routes.SETTINGS_NOTE_APPEARANCE) {
                 com.lu4p.fokuslauncher.notes.NoteAppearanceScreen(
                         onNavigateBack = { navController.popBackStack() },
+                        backgroundScrim = com.lu4p.fokuslauncher.theme.themedSettingsScrim,
+                )
+            }
+
+            fokusSettingsComposable(Routes.SETTINGS_LOCK_NOTE) {
+                com.lu4p.fokuslauncher.lockscreen.LockNoteScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onOpenWallpaper = { navController.navigateSingleTop(Routes.SETTINGS_WALLPAPER) },
                         backgroundScrim = com.lu4p.fokuslauncher.theme.themedSettingsScrim,
                 )
             }

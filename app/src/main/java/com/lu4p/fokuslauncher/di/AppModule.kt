@@ -321,6 +321,7 @@ object AppModule {
             migration5To6,
             migration6To7,
             migration7To8,
+            com.lu4p.fokuslauncher.notes.NoteMigrations.migration8To9,
     ).build()
 
     @Provides

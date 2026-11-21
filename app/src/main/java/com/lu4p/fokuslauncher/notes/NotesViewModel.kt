@@ -31,6 +31,7 @@ constructor(
         val fontCache: FontFamilyCache,
         private val widgetPreferences: NoteWidgetPreferences,
         private val savedState: SavedStateHandle,
+        private val lockNotes: com.lu4p.fokuslauncher.lockscreen.LockNoteController,
 ) : ViewModel() {
 
     val notes: StateFlow<List<NoteEntity>> =
@@ -129,7 +130,7 @@ constructor(
         val target = !pinned
         pinned = target
         viewModelScope.launch {
-            if (target) repository.pin(id) else repository.unpin(id)
+            if (target) { if (!repository.pinAdd(id)) pinned = false } else repository.unpinOne(id)
         }
     }
 
@@ -138,7 +139,7 @@ constructor(
         val id = editingId
         if (id == NO_NOTE) return
         autosave?.cancel()
-        viewModelScope.launch { withContext(NonCancellable) { repository.saveText(id, draftTitle, draftBody) } }
+        viewModelScope.launch { withContext(NonCancellable) { repository.saveText(id, draftTitle, draftBody) }; lockNotes.onNoteSaved(id) }
     }
 
     fun closeEditor() {
@@ -155,6 +156,7 @@ constructor(
             withContext(NonCancellable) {
                 repository.saveText(id, title, body)
                 repository.deleteIfBlank(id)
+                lockNotes.onNoteSaved(id)
             }
         }
     }

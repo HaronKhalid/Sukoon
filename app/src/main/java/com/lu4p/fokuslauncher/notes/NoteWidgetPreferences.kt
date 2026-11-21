@@ -24,6 +24,7 @@ class NoteWidgetPreferences
 constructor(@param:ApplicationContext private val context: Context) {
     private val styleKey = stringPreferencesKey("note_widget_style")
     private val seededKey = booleanPreferencesKey("sample_seeded")
+    private val defaultStyleIdKey = stringPreferencesKey("default_note_style_id")
 
     val styleFlow: Flow<NoteWidgetStyle> =
             context.noteWidgetDataStore.data.map { NoteWidgetStyle.decode(it[styleKey]) }
@@ -32,6 +33,14 @@ constructor(@param:ApplicationContext private val context: Context) {
 
     suspend fun setStyle(style: NoteWidgetStyle) {
         context.noteWidgetDataStore.edit { it[styleKey] = style.coerced().encode() }
+    }
+
+    /** Registry id of the global default note design (empty when styled by hand). */
+    val defaultStyleIdFlow: Flow<String> =
+            context.noteWidgetDataStore.data.map { it[defaultStyleIdKey].orEmpty() }
+
+    suspend fun setDefaultStyleId(id: String) {
+        context.noteWidgetDataStore.edit { it[defaultStyleIdKey] = id }
     }
 
     suspend fun sampleSeeded(): Boolean = context.noteWidgetDataStore.data.first()[seededKey] == true
